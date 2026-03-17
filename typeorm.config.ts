@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
-import { ExemploEntity } from './src/exemplo/entity/exemplo.entity';
 import { UserEntity } from './src/user/entity/user.entity';
 import { AccessLevelEntity } from './src/user/entity/access-level.entity';
 
@@ -11,6 +10,6 @@ export default new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  entities: [ExemploEntity, UserEntity, AccessLevelEntity],
+  entities: [UserEntity, AccessLevelEntity],
   migrations: ['src/migrations/*.ts'],
 });
