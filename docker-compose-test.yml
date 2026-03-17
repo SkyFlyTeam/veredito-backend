@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  app-test:
+    container_name: nest_app_test
+    build: .
+    command: npm run test:cov
+    env_file:
+      - .env.test
+    depends_on:
+      - postgres-test
+    networks:
+      - nest_test_network
+
+  postgres-test:
+    container_name: nest_postgres_test
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nestuser
+      POSTGRES_PASSWORD: nestpassword
+      POSTGRES_DB: nestdb_test
+    ports:
+      - "5433:5432"
+    networks:
+      - nest_test_network
+
+networks:
+  nest_test_network:
+    driver: bridge
