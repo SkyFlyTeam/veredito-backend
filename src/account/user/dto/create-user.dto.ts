@@ -11,10 +11,13 @@ export class CreateUserDto extends DTOInterface {
   @ApiProperty({ example: 'Nome de exemplo' })
   @IsString()
   nome?: string;
+  @ApiProperty({ example: 'Sobrenome de exemplo' })
+  @IsString()
+  sobrenome?: string;
   @ApiProperty({ example: 'email@example.com' })
   @IsEmail()
   email!: string;
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ example: 'Skyfly1403*' })
   @IsStrongPassword()
   @MinLength(6)
   password!: string;
