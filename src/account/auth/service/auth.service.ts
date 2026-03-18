@@ -1,6 +1,6 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserService } from '../../user/service/user.service';
-import { CreateUserDto } from '../dto/register.dto';
+import { CreateUserDto } from '../../user/dto/create-user.dto';
 import { LoginDto } from '../dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -19,12 +19,11 @@ export class AuthService {
       throw new Error('User already exists');
     }
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-
     return this.userService.create({
       nome: dto.nome,
+      sobrenome: dto.sobrenome,
       email: dto.email,
-      password: hashedPassword,
+      password: dto.password,
       accessLevel: dto.accessLevel,
     });
   }
@@ -36,7 +35,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.password.toString('utf-8'),
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
