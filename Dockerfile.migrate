@@ -1,0 +1,21 @@
+# Use official Node image
+FROM node:20-alpine AS migrate
+
+# Set working directory
+WORKDIR /app
+
+# Copy only the package.json files first (for caching)
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install --production
+
+# Copy only the necessary files for running migrations
+COPY . .
+
+# Expose nothing since we're only running migrations
+# Expose NestJS default port (not used in migrations)
+EXPOSE 3000
+
+# Run migrations
+CMD ["npm", "run", "migration:run"]
