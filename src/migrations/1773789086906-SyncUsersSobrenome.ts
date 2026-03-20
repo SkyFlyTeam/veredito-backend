@@ -7,9 +7,9 @@ export class SyncUsersSobrenome1773789086906 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "password"`);
     await queryRunner.query(`ALTER TABLE "users" DROP COLUMN "createdAt"`);
     await queryRunner.query(
-      `ALTER TABLE "users" ADD "sobrenome" character varying(100) NOT NULL`,
+      `ALTER TABLE "users" ADD "sobrenome" character varying(100) NOT NULL DEFAULT ''`,
     );
-    await queryRunner.query(`ALTER TABLE "users" ADD "senha" bytea NOT NULL`);
+    await queryRunner.query(`ALTER TABLE "users" ADD "senha" bytea NOT NULL DEFAULT ''`);
     await queryRunner.query(
       `ALTER TABLE "users" ADD "created_at" TIMESTAMP NOT NULL DEFAULT now()`,
     );
