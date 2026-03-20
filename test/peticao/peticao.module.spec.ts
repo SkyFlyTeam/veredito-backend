@@ -1,7 +1,8 @@
 import { Test } from '@nestjs/testing';
-import { PeticaoModule } from './peticao.module';
+import { PeticaoModule } from '../../src/peticao/peticao.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PeticaoEntity } from './entity/peticao.entity';
+import { PeticaoEntity } from '../../src/peticao/entity/peticao.entity';
+import { describe, expect, it } from '@jest/globals';
 
 describe('PeticaoModule', () => {
   it('should be defined', async () => {
