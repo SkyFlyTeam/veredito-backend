@@ -3,10 +3,12 @@ import {
   Column,
   PrimaryGeneratedColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { AccessLevelEntity } from './access-level.entity';
+import { PeticaoEntity } from '../../../peticao/entity/peticao.entity';
 
 @Entity('users')
 export class UserEntity {
@@ -40,4 +42,7 @@ export class UserEntity {
 
   @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
   updatedAt: Date;
+
+  @OneToMany(() => PeticaoEntity, (peticao) => peticao.user)
+  peticoes: PeticaoEntity[];
 }
