@@ -3,11 +3,11 @@ import { IsEmail, IsString } from 'class-validator';
 import DTOInterface from 'src/interfaces/dto.interface';
 
 export class LoginDto extends DTOInterface {
-  @ApiProperty({ example: 'email@example.com' })
+  @ApiProperty({ example: 'skyfy.team@gmail.com' })
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'password123' })
+  @ApiProperty({ example: 'Skyfly1403*' })
   @IsString()
   password: string;
 }
