@@ -10,4 +10,4 @@ import { PeticaoController } from './controller/peticao.controller';
   providers: [PeticaoService],
   exports: [PeticaoService],
 })
-export class PeticaoModule {}
+export class PeticaoModule { }

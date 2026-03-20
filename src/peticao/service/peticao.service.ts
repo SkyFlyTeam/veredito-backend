@@ -9,7 +9,7 @@ export class PeticaoService {
   constructor(
     @InjectRepository(PeticaoEntity)
     private readonly peticaoRepository: Repository<PeticaoEntity>,
-  ) {}
+  ) { }
 
   async findAll(): Promise<PeticaoResponseDTO[]> {
     const peticoes = await this.peticaoRepository.find();
@@ -24,6 +24,14 @@ export class PeticaoService {
     }
 
     return this.mapToResponseDTO(peticao);
+  }
+
+  async create(filePath: string, usuarioId: number): Promise<void> {
+    const peticao = this.peticaoRepository.create({
+      caminhoArquivo: filePath,
+      usuarioId,
+    });
+    await this.peticaoRepository.save(peticao);
   }
 
   private mapToResponseDTO(peticao: PeticaoEntity): PeticaoResponseDTO {
