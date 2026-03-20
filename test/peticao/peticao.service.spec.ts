@@ -11,11 +11,14 @@ const makePeticao = (): PeticaoEntity => ({
   questaoVetor: '',
   createdAt: new Date(),
   usuarioId: 1,
+  user: null as any,
 });
 
 const createPeticaoRepositoryMock = () => ({
   find: jest.fn((): Promise<PeticaoEntity[]> => Promise.resolve([])),
   findOne: jest.fn((): Promise<PeticaoEntity | null> => Promise.resolve(null)),
+  create: jest.fn(),
+  save: jest.fn(),
 });
 
 describe('PeticaoService', () => {
@@ -66,6 +69,25 @@ describe('PeticaoService', () => {
 
        const result = await service.findOne(1);
        expect(result.resumo).toBeNull();
+    });
+  });
+
+  describe('create', () => {
+    it('should create and save a new petition', async () => {
+      const filePath = 'path/to/file.pdf';
+      const usuarioId = 1;
+      const peticao = makePeticao();
+
+      repository.create.mockReturnValueOnce(peticao);
+      repository.save.mockResolvedValueOnce(peticao);
+
+      await service.create(filePath, usuarioId);
+
+      expect(repository.create).toHaveBeenCalledWith({
+        caminhoArquivo: filePath,
+        usuarioId,
+      });
+      expect(repository.save).toHaveBeenCalledWith(peticao);
     });
   });
 });

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { PeticaoController } from '../../src/peticao/controller/peticao.controller';
 import { PeticaoService } from '../../src/peticao/service/peticao.service';
 import { PeticaoResponseDTO } from '../../src/peticao/dto/peticao-response.dto';
+import { BadRequestException } from '@nestjs/common';
 
 const makePeticaoResponse = (): PeticaoResponseDTO => ({
   id: 1,
@@ -14,6 +14,7 @@ const makePeticaoResponse = (): PeticaoResponseDTO => ({
 const createPeticaoServiceMock = () => ({
   findAll: jest.fn((): Promise<PeticaoResponseDTO[]> => Promise.resolve([])),
   findOne: jest.fn((): Promise<PeticaoResponseDTO> => Promise.resolve(makePeticaoResponse())),
+  create: jest.fn((): Promise<void> => Promise.resolve()),
 });
 
 describe('PeticaoController', () => {
@@ -49,6 +50,18 @@ describe('PeticaoController', () => {
 
       const result = await controller.findOne(1);
       expect(result).toEqual(response);
+    });
+  });
+
+  describe('uploadFile', () => {
+    it('should call service for file upload', async () => {
+      const file = { path: 'uploads/file.pdf' } as Express.Multer.File;
+      await controller.uploadFile(file);
+      expect(service.create).toHaveBeenCalledWith('uploads/file.pdf', 1);
+    });
+
+    it('should throw BadRequestException if file is missing', async () => {
+      await expect(controller.uploadFile(null as any)).rejects.toThrow(BadRequestException);
     });
   });
 });
