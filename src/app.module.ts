@@ -4,8 +4,6 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AccountModule } from 'src/account/account.module';
-import { UserModule } from './user/user.module';
-import { AuthModule } from './auth/auth.module';
 import { PeticaoModule } from './peticao/peticao.module';
 
 @Module({
@@ -23,8 +21,6 @@ import { PeticaoModule } from './peticao/peticao.module';
     }),
 
     AccountModule,
-    UserModule,
-    AuthModule,
     PeticaoModule,
   ],
   controllers: [AppController],
