@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
-import { PeticaoModule } from '../src/peticao/peticao.module';
-import { PeticaoService } from '../src/peticao/service/peticao.service';
+import { PeticaoModule } from '../../src/peticao/peticao.module';
+import { PeticaoService } from '../../src/peticao/service/peticao.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PeticaoEntity } from '../src/peticao/entity/peticao.entity';
+import { PeticaoEntity } from '../../src/peticao/entity/peticao.entity';
 
 describe('PeticaoController (e2e)', () => {
   let app: INestApplication;
