@@ -110,13 +110,20 @@ export class UserService implements ServiceInterface {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    if (updateData.email && updateData.email !== user.email) {
-      const emailInUse = await this.userRepository.findOne({
-        where: { email: updateData.email },
-      });
+    if (updateData.email) {
+      const normalizedNewEmail = updateData.email.trim().toLowerCase();
+      const normalizedCurrentEmail = user.email.trim().toLowerCase();
 
-      if (emailInUse) {
-        throw new ConflictException('Email já cadastrado');
+      updateData.email = normalizedNewEmail;
+
+      if (normalizedNewEmail !== normalizedCurrentEmail) {
+        const emailInUse = await this.userRepository.findOne({
+          where: { email: normalizedNewEmail },
+        });
+
+        if (emailInUse && emailInUse.id !== user.id) {
+          throw new ConflictException('Email já cadastrado');
+        }
       }
     }
 
