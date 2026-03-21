@@ -1,9 +1,13 @@
-import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Controller, Get, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { PeticaoService } from '../service/peticao.service';
 import { PeticaoResponseDTO } from '../dto/peticao-response.dto';
+import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../account/auth/guards/roles.guard';
 
 @ApiTags('Petições')
+@ApiBearerAuth('access-token')
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('peticao')
 export class PeticaoController {
   constructor(private readonly peticaoService: PeticaoService) {}
