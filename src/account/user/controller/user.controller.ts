@@ -22,22 +22,24 @@ import {
 import { JwtAuthGuard } from 'src/account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/account/auth/guards/roles.guard';
 import { Roles } from 'src/account/auth/decorators/roles.decorator';
+import { Public } from 'src/account/auth/decorators/public.decorator';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { UpdateUserDto } from '../dto/update-user.dto';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags('Users')
 @Controller('users')
+@ApiBearerAuth('access-token')
 export class UsersController {
   constructor(private readonly usersService: UserService) {}
 
+  @Public()
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')
   @Roles('superuser')
   @Get(':id')
   async findOne(@Param('id', ParseIntPipe) id: number) {
@@ -49,8 +51,6 @@ export class UsersController {
     return user;
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')
   @Roles('superuser')
   @Patch(':id')
   @ApiBody({
@@ -69,8 +69,6 @@ export class UsersController {
     return this.usersService.update(String(id), dto);
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')
   @Roles('superuser')
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
@@ -89,8 +87,6 @@ export class UsersController {
     return { message: 'Usuário excluído com sucesso.' };
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @ApiBearerAuth('access-token')
   @Roles('superuser')
   @Get()
   findAll() {
