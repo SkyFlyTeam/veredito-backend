@@ -6,6 +6,7 @@ import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../account/auth/guards/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
+import { diskStorage } from 'multer';
 import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
 
 @ApiTags('Petições')
@@ -85,8 +86,5 @@ export class PeticaoController {
   ): Promise<PeticaoResponseDTO> {
     return this.peticaoService.findOne(id);
   }
-}
-function diskStorage(arg0: { destination: (req: any, file: any, cb: any) => void; filename: (req: any, file: any, cb: any) => void; }): any {
-  throw new Error('Function not implemented.');
 }
 
