@@ -17,7 +17,7 @@ export const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt'];
 
 
 @Injectable()
-export class FileConverterService {
+export class WordProcessingService {
   /**
    * Main public method of the service.
    * Receives an uploaded file (Express.Multer.File), validates its extension
