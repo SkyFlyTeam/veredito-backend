@@ -5,7 +5,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AccountModule } from 'src/account/account.module';
 import { PeticaoModule } from './peticao/peticao.module';
-import { FileConverterModule } from './file-converter/file-converter.module';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { FileConverterModule } from './file-converter/file-converter.module';
 
     AccountModule,
     PeticaoModule,
-    FileConverterModule,
   ],
   controllers: [AppController],
   providers: [AppService],

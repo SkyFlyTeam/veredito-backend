@@ -12,7 +12,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { FileConverterService } from '../src/file-converter/service/file-converter.service';
+import { WordProcessingService } from '../src/peticao/pipeline-services/word_processing/word-processing.service';
 
 async function main() {
   const filePath = process.argv[2];
@@ -42,7 +42,7 @@ async function main() {
     size: buffer.length,
   } as Express.Multer.File;
 
-  const service = new FileConverterService();
+  const service = new WordProcessingService();
 
   console.log(`\nParsing file: ${originalname} (${buffer.length} bytes)\n`);
 
