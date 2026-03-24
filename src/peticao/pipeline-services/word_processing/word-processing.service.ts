@@ -71,7 +71,11 @@ export class WordProcessingService {
     // result.text contains the concatenated raw text from all pages.
     const parser = new PDFParse({ data: buffer });
     const result = await parser.getText();
-    return result.text;
+
+    // Remove page number lines that match the pattern: "-- 1 of 3 --" added automatically by the pdf parser
+    const cleanedText = result.text.replace(/^.*--\s*\d+\s+of\s+\d+\s*--.*$\n?/gim, '');
+
+    return cleanedText;
   }
 
   /**
