@@ -3,13 +3,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PeticaoEntity } from '../entity/peticao.entity';
 import { PeticaoResponseDTO } from '../dto/peticao-response.dto';
+import { TextProcessingService } from '../pipeline-services/word_processing/text-processing.service';
 
 @Injectable()
 export class PeticaoService {
   constructor(
     @InjectRepository(PeticaoEntity)
     private readonly peticaoRepository: Repository<PeticaoEntity>,
-  ) {}
+    private readonly textProcessingService: TextProcessingService,
+  ) { }
 
   async findAll(): Promise<PeticaoResponseDTO[]> {
     const peticoes = await this.peticaoRepository.find();
