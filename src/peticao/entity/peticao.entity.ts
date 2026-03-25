@@ -34,4 +34,7 @@ export class PeticaoEntity {
   @ManyToOne(() => UserEntity, (user) => user.peticoes)
   @JoinColumn({ name: 'usuario_id' })
   user: UserEntity;
+
+  // @OneToMany(() => PrecedenteSugeridoEntity, (precedente) => precedente.peticao)
+  // precedente: PrecedenteSugeridoEntity[];
 }

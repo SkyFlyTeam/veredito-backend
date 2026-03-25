@@ -5,9 +5,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { AccountModule } from 'src/account/account.module';
 import { PeticaoModule } from './peticao/peticao.module';
+import { PrecedenteModule } from './precedents/precedente.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { JobsModule } from './crons/jobcron.module';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -22,8 +26,10 @@ import { PeticaoModule } from './peticao/peticao.module';
 
     AccountModule,
     PeticaoModule,
+    PrecedenteModule,
+    JobsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
