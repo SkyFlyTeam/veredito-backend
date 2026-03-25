@@ -1,5 +1,6 @@
 import {
   Column,
+  Entity,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -11,23 +12,24 @@ import { TribunalPrecedenteEntity } from './tribunal_precedente.entity';
 import { EspeciePrecedenteEntity } from './especie_precedente.entity';
 import EntityInterface from 'src/interfaces/entity.interface';
 
+@Entity('precedente')
 export default class PrecedenteEntity implements EntityInterface {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
-  numero_registro: number;
+  @Column({ type: 'text' })
+  numero_registro: string;
 
-  @Column()
+  @Column({ type: 'text', nullable: true })
   tese: string;
 
-  @Column({ type: 'datetime' })
+  @Column({ type: 'timestamp' })
   ultima_atualizacao: Date;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   tese_vetor: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   questao_vetor: string;
 
   @Column({
@@ -43,15 +45,15 @@ export default class PrecedenteEntity implements EntityInterface {
   )
   precedenteSugerido: PrecedenteSugeridoEntity[];
 
-  @ManyToOne(() => StatusPrecedenteEntity, (status) => status.precedente)
+  @ManyToOne(() => StatusPrecedenteEntity, { nullable: true })
   @JoinColumn({ name: 'status_id' })
-  status: StatusPrecedenteEntity;
+  status?: StatusPrecedenteEntity;
 
-  @ManyToOne(() => TribunalPrecedenteEntity, (tribunal) => tribunal.precedente)
+  @ManyToOne(() => TribunalPrecedenteEntity, { nullable: true })
   @JoinColumn({ name: 'tribunal_id' })
-  tribunal: TribunalPrecedenteEntity;
+  tribunal?: TribunalPrecedenteEntity;
 
-  @ManyToOne(() => EspeciePrecedenteEntity, (especie) => especie.precedente)
+  @ManyToOne(() => EspeciePrecedenteEntity, { nullable: true })
   @JoinColumn({ name: 'especie_id' })
-  especie: EspeciePrecedenteEntity;
+  especie?: EspeciePrecedenteEntity;
 }

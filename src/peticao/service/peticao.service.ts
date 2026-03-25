@@ -9,7 +9,7 @@ export class PeticaoService {
   constructor(
     @InjectRepository(PeticaoEntity)
     private readonly peticaoRepository: Repository<PeticaoEntity>,
-  ) { }
+  ) {}
 
   async findAll(): Promise<PeticaoResponseDTO[]> {
     const peticoes = await this.peticaoRepository.find();

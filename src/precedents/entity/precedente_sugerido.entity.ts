@@ -1,13 +1,20 @@
-import { Column, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import PrecedenteEntity from './precedente.entity';
-import { PeticaoEntity } from './preticao.entity';
 import EntityInterface from 'src/interfaces/entity.interface';
+import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
 
+@Entity('precedente_sugerido')
 export class PrecedenteSugeridoEntity implements EntityInterface {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ type: 'decimal', precision: 5, scale: 2 })
   percentual_similaridade: number;
 
   @Column()
