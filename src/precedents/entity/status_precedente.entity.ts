@@ -1,5 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import PrecedenteEntity from './precedente.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import EntityInterface from 'src/interfaces/entity.interface';
 
 @Entity('status_precedente')
@@ -7,9 +6,9 @@ export class StatusPrecedenteEntity implements EntityInterface {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 512, nullable: true })
   nome: string;
 
-  @OneToMany(() => PrecedenteEntity, (precedente) => precedente.status)
-  precedente: PrecedenteEntity[];
+  // @OneToMany(() => PrecedenteEntity, (precedente) => precedente.status)
+  // precedente: PrecedenteEntity[];
 }

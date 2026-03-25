@@ -1,5 +1,23 @@
-import { BadRequestException, Controller, Get, HttpCode, Param, ParseIntPipe, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+} from '@nestjs/swagger';
 import { PeticaoService } from '../service/peticao.service';
 import { PeticaoResponseDTO } from '../dto/peticao-response.dto';
 import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
@@ -14,7 +32,7 @@ import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('peticao')
 export class PeticaoController {
-  constructor(private readonly peticaoService: PeticaoService) { }
+  constructor(private readonly peticaoService: PeticaoService) {}
 
   @Post('upload')
   @HttpCode(201)
@@ -81,10 +99,7 @@ export class PeticaoController {
     description: 'Petição retornada com sucesso',
     type: PeticaoResponseDTO,
   })
-  findOne(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<PeticaoResponseDTO> {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<PeticaoResponseDTO> {
     return this.peticaoService.findOne(id);
   }
 }
-
