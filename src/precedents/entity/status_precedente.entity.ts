@@ -1,5 +1,7 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import EntityInterface from 'src/interfaces/entity.interface';
+import { Exclude } from 'class-transformer';
+import PrecedenteEntity from './precedente.entity';
 
 @Entity('status_precedente')
 export class StatusPrecedenteEntity implements EntityInterface {
@@ -9,6 +11,7 @@ export class StatusPrecedenteEntity implements EntityInterface {
   @Column({ length: 512, nullable: true })
   nome: string;
 
-  // @OneToMany(() => PrecedenteEntity, (precedente) => precedente.status)
-  // precedente: PrecedenteEntity[];
+  @Exclude()
+  @OneToMany(() => PrecedenteEntity, (precedente) => precedente.status)
+  precedente: PrecedenteEntity[];
 }

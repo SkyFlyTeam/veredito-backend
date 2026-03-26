@@ -5,6 +5,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import PrecedenteEntity from './precedente.entity';
 import EntityInterface from 'src/interfaces/entity.interface';
 import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
@@ -23,10 +24,18 @@ export class PrecedenteSugeridoEntity implements EntityInterface {
   @Column({ length: 500 })
   sintese_explicativa: string;
 
+  @Column({ name: 'precedente_id' })
+  precedenteId: number;
+
+  @Column({ name: 'peticao_id' })
+  peticaoId: number;
+
+  @Exclude()
   @ManyToOne(() => PrecedenteEntity, (precedente) => precedente.id)
   @JoinColumn({ name: 'precedente_id' })
   precedente: PrecedenteEntity;
 
+  @Exclude()
   @ManyToOne(() => PeticaoEntity, (peticao) => peticao.id)
   @JoinColumn({ name: 'peticao_id' })
   peticao: PeticaoEntity;
