@@ -1,13 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail } from 'class-validator';
+import { IsEmail, IsInt, IsString } from 'class-validator';
 
 export class JwtPayloadDto {
-  @ApiProperty({ example: '123e4567-e89b-12d3-a456-426614174000' })
-  sub: string;
+  @ApiProperty({ example: 1 })
+  sub: number;
 
   @ApiProperty({ example: 'email@example.com' })
   @IsEmail()
   email: string;
+
+  @ApiProperty({ example: 'Admin' })
+  @IsString()
+  nome: string;
+
+  @ApiProperty({ example: 'Silva' })
+  @IsString()
+  sobrenome: string;
 
   @ApiProperty({ example: 'user' })
   role: string;

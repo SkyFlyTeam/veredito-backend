@@ -3,6 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { AuthService } from '../../src/account/auth/service/auth.service';
 import { UserEntity } from '../../src/account/user/entity/user.entity';
+import { PeticaoEntity } from '../../src/peticao/entity/peticao.entity';
 
 jest.mock('bcrypt', () => ({
   compare: jest.fn(),
@@ -21,6 +22,7 @@ const makeUser = (): UserEntity => ({
   },
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
+  peticoes: [] as PeticaoEntity[],
 });
 
 const createUserServiceMock = () => ({
@@ -40,19 +42,16 @@ describe('AuthService', () => {
 
   beforeEach(() => {
     jest.resetAllMocks();
-
     userService = createUserServiceMock();
     jwtService = createJwtServiceMock();
     compareMock = bcrypt.compare as jest.MockedFunction<typeof bcrypt.compare>;
-
     service = new AuthService(userService as never, jwtService as never);
   });
 
   describe('login', () => {
     it('deve retornar access_token quando credenciais são válidas', async () => {
       const user = makeUser();
-
-      userService.findByEmail.mockResolvedValueOnce(user);
+      userService.findByEmail.mockResolvedValueOnce(user as never);
       compareMock.mockResolvedValueOnce(true as never);
       jwtService.sign.mockReturnValueOnce('token-jwt-fake');
 
@@ -65,12 +64,14 @@ describe('AuthService', () => {
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: 1,
         email: 'skyfy.team@gmail.com',
+        nome: 'Dev',
+        sobrenome: 'Local',
         role: 'superuser',
       });
     });
 
     it('deve lançar UnauthorizedException quando usuário não existe', async () => {
-      userService.findByEmail.mockResolvedValueOnce(null);
+      userService.findByEmail.mockResolvedValueOnce(null as never);
 
       await expect(
         service.login({
@@ -85,7 +86,7 @@ describe('AuthService', () => {
 
     it('deve lançar UnauthorizedException quando senha é inválida', async () => {
       const user = makeUser();
-      userService.findByEmail.mockResolvedValueOnce(user);
+      userService.findByEmail.mockResolvedValueOnce(user as never);
       compareMock.mockResolvedValueOnce(false as never);
 
       await expect(
@@ -100,7 +101,7 @@ describe('AuthService', () => {
 
     it('deve comparar senha de entrada com hash salvo no banco', async () => {
       const user = makeUser();
-      userService.findByEmail.mockResolvedValueOnce(user);
+      userService.findByEmail.mockResolvedValueOnce(user as never);
       compareMock.mockResolvedValueOnce(true as never);
       jwtService.sign.mockReturnValueOnce('token-jwt-fake');
 
