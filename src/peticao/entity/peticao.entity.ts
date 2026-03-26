@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { UserEntity } from '../../account/user/entity/user.entity';
+import { PrecedenteSugeridoEntity } from '../../precedents/entity/precedente_sugerido.entity';
 
 @Entity('peticao')
 export class PeticaoEntity {
@@ -35,6 +37,9 @@ export class PeticaoEntity {
   @JoinColumn({ name: 'usuario_id' })
   user: UserEntity;
 
-  // @OneToMany(() => PrecedenteSugeridoEntity, (precedente) => precedente.peticao)
-  // precedente: PrecedenteSugeridoEntity[];
+  @OneToMany(
+    () => PrecedenteSugeridoEntity,
+    (precedenteSugerido) => precedenteSugerido.peticao,
+  )
+  precedenteSugerido: PrecedenteSugeridoEntity[];
 }
