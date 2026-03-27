@@ -14,7 +14,7 @@ services:
 
   postgres-test:
     container_name: nest_postgres_test
-    image: postgres:15
+    image: pgvector/pgvector:pg15-trixie
     restart: unless-stopped
     environment:
       POSTGRES_USER: nestuser
