@@ -30,7 +30,6 @@ export class PrecedenteSugeridoEntity implements EntityInterface {
   @Column({ name: 'peticao_id' })
   peticaoId: number;
 
-  @Exclude()
   @ManyToOne(() => PrecedenteEntity, (precedente) => precedente.id)
   @JoinColumn({ name: 'precedente_id' })
   precedente: PrecedenteEntity;
