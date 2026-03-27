@@ -53,7 +53,6 @@
     "stopword": "^3.1.5",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.28"
-    "typeorm": "^0.3.28"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
