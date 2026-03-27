@@ -18,13 +18,14 @@ services:
       - nest_network
 
   postgres:
+    image: pgvector/pgvector:pg15-trixie
     container_name: nest_postgres
-    image: postgres:15
-    restart: unless-stopped
     environment:
       POSTGRES_USER: nestuser
       POSTGRES_PASSWORD: nestpassword
       POSTGRES_DB: nestdb
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

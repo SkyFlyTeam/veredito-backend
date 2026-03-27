@@ -19,7 +19,7 @@ services:
 
   postgres:
     container_name: nest_postgres_prod
-    image: postgres:15
+    image: pgvector/pgvector:pg15-trixie
     restart: always
     environment:
       POSTGRES_USER: nestuser

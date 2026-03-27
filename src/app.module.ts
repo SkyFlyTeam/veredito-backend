@@ -8,6 +8,7 @@ import { PeticaoModule } from './peticao/peticao.module';
 import { PrecedenteModule } from './precedents/precedente.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JobsModule } from './crons/jobcron.module';
+import { EmbeddingsModule } from './embeddings/embeddings.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { JobsModule } from './crons/jobcron.module';
     PeticaoModule,
     PrecedenteModule,
     JobsModule,
+    EmbeddingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
