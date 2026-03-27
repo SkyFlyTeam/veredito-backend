@@ -6,6 +6,7 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
 import { PrecedenteSugeridoEntity } from './precedente_sugerido.entity';
 import { StatusPrecedenteEntity } from './status_precedente.entity';
 import { TribunalPrecedenteEntity } from './tribunal_precedente.entity';
@@ -39,6 +40,7 @@ export default class PrecedenteEntity implements EntityInterface {
   })
   createdAt: Date;
 
+  @Exclude()
   @OneToMany(
     () => PrecedenteSugeridoEntity,
     (precedenteSugerido) => precedenteSugerido.precedente,
