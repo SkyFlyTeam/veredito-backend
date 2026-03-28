@@ -4,13 +4,16 @@
  * Runs the full pipeline (text extraction → NLP processing) on a given file
  * and prints a side-by-side report.
  *
- * Usage:
+ * Preferred usage (via Docker / production-safe CLI):
+ *   docker compose run --rm app npm run start:cli -- run:pipeline example-1.docx
+ *
+ * Local usage (requires ts-node, outside Docker only):
  *   npx ts-node dev-tools/run-pipeline.ts <filename>
  *
  * Examples:
- *   npx ts-node dev-tools/run-pipeline.ts example-1.docx
- *   npx ts-node dev-tools/run-pipeline.ts example-2.pdf
- *   npx ts-node dev-tools/run-pipeline.ts example-3.txt
+ *   docker compose run --rm app npm run start:cli -- run:pipeline example-1.docx
+ *   docker compose run --rm app npm run start:cli -- run:pipeline example-2.pdf
+ *   docker compose run --rm app npm run start:cli -- run:pipeline example-3.txt
  *
  * The filename is resolved relative to dev-tools/data/.
  */
