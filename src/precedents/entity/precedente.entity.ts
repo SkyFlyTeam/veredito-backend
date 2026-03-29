@@ -24,14 +24,17 @@ export default class PrecedenteEntity implements EntityInterface {
   @Column({ type: 'text', nullable: true })
   tese: string;
 
+  @Column({ type: 'text', nullable: true })
+  questao: string;
+
   @Column({ type: 'timestamp' })
   ultima_atualizacao: Date;
 
-  @Column({ type: 'text', nullable: true })
-  tese_vetor: string;
+  @Column({ type: 'vector', nullable: true })
+  tese_vetor: number[];
 
-  @Column({ type: 'text', nullable: true })
-  questao_vetor: string;
+  @Column({ type: 'vector', nullable: true })
+  questao_vetor: number[];
 
   @Column({
     name: 'created_at',

@@ -18,7 +18,9 @@ async function main() {
   const filePath = process.argv[2];
 
   if (!filePath) {
-    console.error('Usage: npx ts-node -r tsconfig-paths/register scripts/test-file-converter.ts <path-to-file>');
+    console.error(
+      'Usage: npx ts-node -r tsconfig-paths/register scripts/test-file-converter.ts <path-to-file>',
+    );
     process.exit(1);
   }
 
