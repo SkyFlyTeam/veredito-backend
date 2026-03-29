@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 
@@ -14,10 +18,12 @@ export class EmbeddingsService {
 
   async generateEmbedding(text: string): Promise<number[]> {
     try {
-      this.logger.log(`Generating embedding for text: "${text.substring(0, 50)}..."`);
+      this.logger.log(
+        `Generating embedding for text: "${text.substring(0, 50)}..."`,
+      );
 
       const response = await this.openai.embeddings.create({
-        model: 'text-embedding-3-large',
+        model: 'text-embedding-3-small',
         input: text,
       });
 

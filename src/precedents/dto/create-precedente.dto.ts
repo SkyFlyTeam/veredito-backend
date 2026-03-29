@@ -21,29 +21,26 @@ export class CreatePrecedenteDto {
   })
   tese: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty({
-    example: 'tese vetor',
-    description: 'Vetor da tese para análise',
+    example: [1.0, 2.5, 3.7],
+    description: 'Vetor da tese para análise (array de números)',
   })
-  tese_vetor: string;
+  tese_vetor?: number[];
 
-  @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty({
-    example: 'questao vetor',
-    description: 'Vetor da questão para análise',
+    example: [1.2, 2.8, 3.4],
+    description: 'Vetor da questão para análise (array de números)',
   })
-  questao_vetor: string;
+  questao_vetor?: number[];
 
-  @IsNumber()
-  @IsNotEmpty()
+  @IsOptional()
   @ApiProperty({
-    example: 1,
-    description: 'ID do usuário que criou o precedente',
+    example: 'Questão jurídica do precedente',
+    description: 'Questão jurídica do precedente',
   })
-  user_id: number;
+  questao?: string;
 
   @IsOptional()
   @ApiProperty({

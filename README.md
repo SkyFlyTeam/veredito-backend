@@ -79,3 +79,9 @@ docker compose run --rm app npm run start:cli -- update:precedentes
 ```
 
 Comando para atualizar precedentes
+
+```bash
+docker compose run --rm app npm run start:cli -- embeddings:precedentes
+```
+
+Comando para gerar embeddings de todos os precedentes

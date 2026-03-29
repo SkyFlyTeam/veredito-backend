@@ -32,7 +32,7 @@ describe('EmbeddingsService', () => {
       
       const mockResponse = {
         data: [{ embedding: mockEmbedding, index: 0, object: 'embedding' }],
-        model: 'text-embedding-3-large',
+        model: 'text-embedding-3-small',
         object: 'list',
         usage: { prompt_tokens: 10, total_tokens: 10 },
       };
@@ -43,7 +43,7 @@ describe('EmbeddingsService', () => {
 
       expect(result).toEqual(mockEmbedding);
       expect(mockOpenAI.embeddings.create).toHaveBeenCalledWith({
-        model: 'text-embedding-3-large',
+        model: 'text-embedding-3-small',
         input: text,
       });
     });

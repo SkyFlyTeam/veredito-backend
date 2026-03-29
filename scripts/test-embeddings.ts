@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 // npx ts-node -r tsconfig-paths/register scripts/test-embeddings.ts "Seu texto aqui"
 
 import * as fs from 'fs';
@@ -23,7 +24,9 @@ async function main() {
   const text = process.argv[2] || 'Isso é um teste de geração de embeddings.';
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('Error: OPENAI_API_KEY not found in environment or .env file.');
+    console.error(
+      'Error: OPENAI_API_KEY not found in environment or .env file.',
+    );
     process.exit(1);
   }
 
