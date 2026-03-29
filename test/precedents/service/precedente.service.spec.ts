@@ -16,26 +16,30 @@ describe('PrecedenteService', () => {
   const mockStatus: StatusPrecedenteEntity = {
     id: 1,
     nome: 'Ativo',
+    precedente: [],
   };
 
   const mockTribunal: TribunalPrecedenteEntity = {
     id: 1,
     nome: 'Tribunal de Justiça',
     sigla: 'TJ',
+    precedente: [],
   };
 
   const mockEspecie: EspeciePrecedenteEntity = {
     id: 1,
     nome: 'Habeas Corpus',
     sigla: 'HC',
+    precedente: [],
   };
 
   const mockPrecedente: PrecedenteEntity = {
     id: 1,
     numero_registro: '12345',
     tese: 'Tese do precedente',
-    tese_vetor: 'tese vetor',
-    questao_vetor: 'questao vetor',
+    questao: 'Questão do precedente',
+    tese_vetor: [1.0, 2.5, 3.7],
+    questao_vetor: [1.2, 2.8, 3.4],
     ultima_atualizacao: new Date(),
     createdAt: new Date(),
     status: mockStatus,
@@ -47,9 +51,9 @@ describe('PrecedenteService', () => {
   const mockCreateDto: CreatePrecedenteDto = {
     numero_registro: 12345,
     tese: 'Tese do precedente',
-    tese_vetor: 'tese vetor',
-    questao_vetor: 'questao vetor',
-    user_id: 1,
+    tese_vetor: [1.0, 2.5, 3.7],
+    questao_vetor: [1.2, 2.8, 3.4],
+    questao: 'Questão do precedente',
     status: mockStatus,
     tribunal: mockTribunal,
     especie: mockEspecie,
@@ -59,6 +63,7 @@ describe('PrecedenteService', () => {
     id: 1,
     numero_registro: 12346,
     tese: 'Tese atualizada',
+    questao: 'Questão atualizada',
     status: mockStatus,
     tribunal: mockTribunal,
     especie: mockEspecie,
@@ -95,8 +100,15 @@ describe('PrecedenteService', () => {
   describe('create', () => {
     it('should create and return a new precedente', async () => {
       const expectedEntity = {
-        ...mockCreateDto,
-        ultima_atualizacao: mockCreateDto.ultima_atualizacao || expect.any(Date),
+        numero_registro: '12345',
+        tese: 'Tese do precedente',
+        questao: 'Questão do precedente',
+        tese_vetor: [1.0, 2.5, 3.7],
+        questao_vetor: [1.2, 2.8, 3.4],
+        ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
       };
       repository.create.mockReturnValue(expectedEntity as PrecedenteEntity);
       repository.save.mockResolvedValue(mockPrecedente);
@@ -104,9 +116,15 @@ describe('PrecedenteService', () => {
       const result = await service.create(mockCreateDto);
 
       expect(repository.create).toHaveBeenCalledWith({
-        ...mockCreateDto,
-        numero_registro: "12345",
+        numero_registro: '12345',
+        tese: 'Tese do precedente',
+        questao: 'Questão do precedente',
+        tese_vetor: [1.0, 2.5, 3.7],
+        questao_vetor: [1.2, 2.8, 3.4],
         ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
       });
       expect(repository.save).toHaveBeenCalledWith(expectedEntity);
       expect(result).toEqual(mockPrecedente);
@@ -117,17 +135,35 @@ describe('PrecedenteService', () => {
         ...mockCreateDto,
         ultima_atualizacao: undefined,
       };
-      
-      repository.create.mockReturnValue(dtoWithoutDate as PrecedenteEntity);
+
+      const expectedEntity = {
+        numero_registro: '12345',
+        tese: 'Tese do precedente',
+        questao: 'Questão do precedente',
+        tese_vetor: [1.0, 2.5, 3.7],
+        questao_vetor: [1.2, 2.8, 3.4],
+        ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
+      };
+
+      repository.create.mockReturnValue(expectedEntity as PrecedenteEntity);
       repository.save.mockResolvedValue(mockPrecedente);
 
       await service.create(dtoWithoutDate);
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          ...dtoWithoutDate,
-          numero_registro: "12345",
+          numero_registro: '12345',
+          tese: 'Tese do precedente',
+          questao: 'Questão do precedente',
+          tese_vetor: [1.0, 2.5, 3.7],
+          questao_vetor: [1.2, 2.8, 3.4],
           ultima_atualizacao: expect.any(Date),
+          status: mockStatus,
+          tribunal: mockTribunal,
+          especie: mockEspecie,
         })
       );
     });
@@ -207,9 +243,13 @@ describe('PrecedenteService', () => {
       const result = await service.update(1, mockUpdateDto);
 
       expect(repository.update).toHaveBeenCalledWith(1, {
-        ...mockUpdateDto,
         numero_registro: '12346',
+        tese: 'Tese atualizada',
+        questao: 'Questão atualizada',
         ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
       });
       expect(result).toEqual(mockUpdateResult);
     });
@@ -229,9 +269,13 @@ describe('PrecedenteService', () => {
       await service.update(1, dtoWithoutDate);
 
       expect(repository.update).toHaveBeenCalledWith(1, {
-        ...dtoWithoutDate,
-        numero_registro: "12346",
+        numero_registro: '12346',
+        tese: 'Tese atualizada',
+        questao: 'Questão atualizada',
         ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
       });
     });
 
@@ -246,9 +290,13 @@ describe('PrecedenteService', () => {
       await service.update('1', mockUpdateDto);
 
       expect(repository.update).toHaveBeenCalledWith(1, {
-        ...mockUpdateDto,
         numero_registro: '12346',
+        tese: 'Tese atualizada',
+        questao: 'Questão atualizada',
         ultima_atualizacao: expect.any(Date),
+        status: mockStatus,
+        tribunal: mockTribunal,
+        especie: mockEspecie,
       });
     });
   });

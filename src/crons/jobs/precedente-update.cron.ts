@@ -142,8 +142,7 @@ export class PrecedenteUpdateService {
             // 🔁 UPDATE
             entity.ultima_atualizacao = new Date();
             entity.tese = p?.tese || null;
-            entity.tese_vetor = p?.highlights?.tese || null;
-            entity.questao_vetor = p?.highlights?.questao || null;
+            entity.questao = p?.questao || null;
             entity.tribunal = tribunal;
             entity.especie = especie;
             entity.status = resolvedStatus;
@@ -155,8 +154,7 @@ export class PrecedenteUpdateService {
               numero_registro: p.id,
               ultima_atualizacao: new Date(),
               tese: p?.tese || null,
-              tese_vetor: p?.highlights?.tese || null,
-              questao_vetor: p?.highlights?.questao || null,
+              questao: p?.questao || null,
               tribunal,
               especie,
               status: resolvedStatus,
