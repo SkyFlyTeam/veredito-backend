@@ -26,13 +26,17 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
+import { PipelineOrchestrator, PipelineResult } from '../pipeline-services/pipeline_orchestror';
 
 @ApiTags('Petições')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('peticao')
 export class PeticaoController {
-  constructor(private readonly peticaoService: PeticaoService) {}
+  constructor(
+    private readonly peticaoService: PeticaoService,
+    private readonly orchestrator: PipelineOrchestrator,
+  ) {}
 
   @Post('upload')
   @HttpCode(201)
@@ -101,5 +105,16 @@ export class PeticaoController {
   })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<PeticaoResponseDTO> {
     return this.peticaoService.findOne(id);
+  }
+
+  @Post(':id/analisar')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Executar a pipeline completa de análise para uma petição' })
+  @ApiResponse({
+    status: 200,
+    description: 'Análise concluída com sucesso',
+  })
+  async analisar(@Param('id', ParseIntPipe) id: number): Promise<PipelineResult> {
+    return this.orchestrator.run(id);
   }
 }
