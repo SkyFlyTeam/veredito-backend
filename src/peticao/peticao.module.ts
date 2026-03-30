@@ -9,12 +9,16 @@ import { TextProcessingService } from './pipeline-services/word_processing/text-
 import { PipelineOrchestrator } from './pipeline-services/pipeline_orchestror';
 import { RunPipelineCommand } from './commands/run-pipeline.command';
 import { SemanticSearchModule } from './semantic-search/semantic-search.module';
+import { EmbeddingsModule } from '../embeddings/embeddings.module';
+import { PrecedenteModule } from '../precedents/precedente.module';
 
 @Module({
   imports: [
     CommandRunnerModule,
     TypeOrmModule.forFeature([PeticaoEntity]),
     SemanticSearchModule,
+    EmbeddingsModule,
+    PrecedenteModule,
   ],
   controllers: [PeticaoController],
   providers: [

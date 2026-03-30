@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { Command, CommandRunner } from 'nest-commander';
 import { PipelineOrchestrator } from '../pipeline-services/pipeline_orchestror';
+import { PeticaoService } from '../service/peticao.service';
 
 const DATA_DIR = path.resolve(process.cwd(), 'dev-tools', 'data');
 
@@ -17,7 +18,10 @@ const MIMETYPE_MAP: Record<string, string> = {
   description: 'Run the full NLP pipeline on a file from dev-tools/data/',
 })
 export class RunPipelineCommand extends CommandRunner {
-  constructor(private readonly orchestrator: PipelineOrchestrator) {
+  constructor(
+    private readonly orchestrator: PipelineOrchestrator,
+    private readonly peticaoService: PeticaoService,
+  ) {
     super();
   }
 
@@ -60,28 +64,32 @@ export class RunPipelineCommand extends CommandRunner {
     console.log(`FILE: ${originalname}`);
     sep('═');
 
-    const { rawText, processedText } = await this.orchestrator.run(multerFile);
+    console.log('\n[INFO] Registering petition in database...');
+    await this.peticaoService.create(filePath, 1);
 
-    console.log('\n[RAW TEXT — first 400 chars]');
+    const allPeticoes = await this.peticaoService.findAll();
+    const peticao = allPeticoes.find(p => p.caminhoArquivo === filePath) || allPeticoes[allPeticoes.length - 1];
+
+    console.log(`[INFO] Running full pipeline for Petição ID: ${peticao.id}...`);
+
+    const result = await this.orchestrator.run(peticao.id);
+
+    console.log('\n[SUMMARY]');
     sep();
-    console.log(preview(rawText));
+    console.log(result.resumo ? result.resumo : 'No summary generated (Synthesis skipped for this sprint)');
 
-    console.log('\n[PROCESSED TEXT — first 400 chars]');
+    console.log('\n[SUGGESTED PRECEDENTS]');
     sep();
-    console.log(preview(processedText));
+    if (result.precedentes.length === 0) {
+      console.log('No precedents suggested (Try checking if your database has seeded precedents with vectors)');
+    } else {
+      result.precedentes.forEach(p => {
+        console.log(`- ${p.numero_registro} (Similarity: ${((1 - (p.score || 0)) * 100).toFixed(2)}%)`);
+        if (p.tese) console.log(`  Tese: ${p.tese.substring(0, 100)}...`);
+      });
+    }
 
-    const rawTokens = rawText.trim().split(/\s+/).length;
-    const processedTokens = processedText.trim()
-      ? processedText.trim().split(/\s+/).length
-      : 0;
-
-    console.log('\n[STATS]');
-    sep();
-    console.log(`  Raw tokens      : ${rawTokens}`);
-    console.log(`  Processed tokens: ${processedTokens}`);
-    console.log(
-      `  Reduction       : ${(((rawTokens - processedTokens) / rawTokens) * 100).toFixed(1)}%`,
-    );
+    console.log('\n[ANALYSIS COMPLETED SUCCESSFULLY]');
     console.log();
   }
 }
