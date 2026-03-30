@@ -2,6 +2,15 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { PeticaoService } from '../../src/peticao/service/peticao.service';
 import { PeticaoEntity } from '../../src/peticao/entity/peticao.entity';
 import { NotFoundException } from '@nestjs/common';
+import { unlink } from 'node:fs/promises';
+
+jest.mock('../../src/peticao/pipeline-services/word_processing/text-processing.service', () => ({
+  TextProcessingService: class TextProcessingService {},
+}));
+
+jest.mock('node:fs/promises', () => ({
+  unlink: jest.fn(() => Promise.resolve()),
+}));
 
 const makePeticao = (): PeticaoEntity => ({
   id: 1,
@@ -19,6 +28,7 @@ const createPeticaoRepositoryMock = () => ({
   findOne: jest.fn((): Promise<PeticaoEntity | null> => Promise.resolve(null)),
   create: jest.fn(),
   save: jest.fn(),
+  delete: jest.fn(() => Promise.resolve({ affected: 0 })),
 });
 
 describe('PeticaoService', () => {
@@ -28,7 +38,7 @@ describe('PeticaoService', () => {
   beforeEach(() => {
     jest.resetAllMocks();
     repository = createPeticaoRepositoryMock();
-    service = new PeticaoService(repository as never);
+    service = new PeticaoService(repository as never, {} as never);
   });
 
   describe('findAll', () => {
@@ -88,6 +98,29 @@ describe('PeticaoService', () => {
         usuarioId,
       });
       expect(repository.save).toHaveBeenCalledWith(peticao);
+    });
+  });
+
+  describe('deleteManyWithFiles', () => {
+    it('should return zero when there are no ids to delete', async () => {
+      const result = await service.deleteManyWithFiles([]);
+
+      expect(result).toEqual({ deleted: 0, fileDeleteFailures: 0 });
+      expect(repository.delete).not.toHaveBeenCalled();
+      expect(unlink).not.toHaveBeenCalled();
+    });
+
+    it('should delete records and related files', async () => {
+      repository.delete.mockResolvedValueOnce({ affected: 2 });
+
+      const result = await service.deleteManyWithFiles([
+        { id: 1, caminhoArquivo: './uploads/peticoes/a.pdf' } as PeticaoEntity,
+        { id: 2, caminhoArquivo: './uploads/peticoes/b.pdf' } as PeticaoEntity,
+      ]);
+
+      expect(repository.delete).toHaveBeenCalledWith([1, 2]);
+      expect(unlink).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({ deleted: 2, fileDeleteFailures: 0 });
     });
   });
 });

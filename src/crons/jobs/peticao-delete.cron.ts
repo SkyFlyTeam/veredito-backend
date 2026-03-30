@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
+import { PeticaoService } from 'src/peticao/service/peticao.service';
 
 @Injectable()
 export class PeticaoDeleteCronService implements OnModuleInit {
@@ -14,6 +15,7 @@ export class PeticaoDeleteCronService implements OnModuleInit {
 	constructor(
 		@InjectRepository(PeticaoEntity)
 		private readonly peticaoRepo: Repository<PeticaoEntity>,
+		private readonly peticaoService: PeticaoService,
 	) {}
 
 	onModuleInit() {
@@ -33,22 +35,22 @@ export class PeticaoDeleteCronService implements OnModuleInit {
 				.createQueryBuilder('peticao')
 				.leftJoin('peticao.precedenteSugerido', 'precedenteSugerido')
 				.select('peticao.id', 'id')
+				.addSelect('peticao.caminhoArquivo', 'caminhoArquivo')
 				.where('peticao.createdAt <= :cutoffDate', { cutoffDate })
 				.groupBy('peticao.id')
+				.addGroupBy('peticao.caminhoArquivo')
 				.having('COUNT(precedenteSugerido.id) = 0')
-				.getRawMany<{ id: number }>();
+				.getRawMany<{ id: number; caminhoArquivo: string }>();
 
-			const idsToDelete = stalePeticoes.map((item) => item.id);
-
-			if (idsToDelete.length === 0) {
+			if (stalePeticoes.length === 0) {
 				this.logger.log('No stale peticoes found for deletion.');
 				return;
 			}
 
-			const deleteResult = await this.peticaoRepo.delete(idsToDelete);
+			const result = await this.peticaoService.deleteManyWithFiles(stalePeticoes);
 
 			this.logger.log(
-				`Stale peticao cleanup finished. Deleted: ${deleteResult.affected ?? 0}`,
+				`Stale peticao cleanup finished. Deleted: ${result.deleted}. File delete failures: ${result.fileDeleteFailures}`,
 			);
 		} catch (error) {
 			this.logger.error('Error running stale peticao cleanup job', error.stack);
