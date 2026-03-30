@@ -12,6 +12,9 @@ import { PrecedenteUpdateService } from './jobs/precedente-update.cron';
 import { EmbeddingsModule } from 'src/embeddings/embeddings.module';
 import { GerarEmbeddingsPrecedenteCron } from './jobs/gerar-embeddings-precedente.cron';
 import { GerarEmbeddingsPrecedenteCommand } from './commands/gerar-embeddings-precedente.command';
+import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
+import { PrecedenteSugeridoEntity } from 'src/precedents/entity/precedente_sugerido.entity';
+import { PeticaoDeleteCronService } from './jobs/peticao-delete.cron';
 
 @Module({
   imports: [
@@ -22,6 +25,8 @@ import { GerarEmbeddingsPrecedenteCommand } from './commands/gerar-embeddings-pr
       TribunalPrecedenteEntity,
       PrecedenteEntity,
       StatusPrecedenteEntity,
+      PeticaoEntity,
+      PrecedenteSugeridoEntity,
     ]),
   ],
   providers: [
@@ -31,6 +36,7 @@ import { GerarEmbeddingsPrecedenteCommand } from './commands/gerar-embeddings-pr
     PrecedenteUpdateService,
     GerarEmbeddingsPrecedenteCron,
     GerarEmbeddingsPrecedenteCommand,
+    PeticaoDeleteCronService,
   ],
 })
 export class JobsModule {}
