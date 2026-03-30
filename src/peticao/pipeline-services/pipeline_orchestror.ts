@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WordProcessingService } from './word_processing/word-processing.service';
 import { PeticaoEntity } from '../entity/peticao.entity';
-import { TextProcessingService } from './word_processing/text-processing.service';
 import { EmbeddingsService } from '../../embeddings/embeddings.service';
 import { SemanticSearchService } from '../semantic-search/service/semantic-search.service';
 import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
@@ -20,7 +19,6 @@ export class PipelineOrchestrator {
 
   constructor(
     private readonly wordProcessingService: WordProcessingService,
-    private readonly textProcessingService: TextProcessingService,
     private readonly embeddingsService: EmbeddingsService,
     private readonly semanticSearchService: SemanticSearchService,
     private readonly precedenteSugeridoService: PrecedenteSugeridoService,
@@ -29,43 +27,37 @@ export class PipelineOrchestrator {
   ) { }
 
   async run(peticaoId: number): Promise<PipelineResult> {
-    this.logger.log(`Starting full pipeline for Petição ID: ${peticaoId}`);
+    this.logger.log(`Iniciando pipeline completo para Petição ID: ${peticaoId}`);
 
     const peticao = await this.peticaoRepository.findOne({ where: { id: peticaoId } });
     if (!peticao) {
       throw new NotFoundException(`Petição com ID ${peticaoId} não encontrada`);
     }
 
-    // 1. EXTRACTION
-    this.logger.log('Step 1: Extracting raw text from file...');
+    this.logger.log('Passo 1: Extraindo texto bruto do arquivo...');
     const rawText = await this.wordProcessingService.extractTextFromPath(peticao.caminhoArquivo);
     if (!rawText) {
       throw new Error('Falha ao extrair texto do arquivo da petição.');
     }
 
-    // 2. NLP PROCESSING
-    this.logger.log('Step 2: Applied NLP processing...');
-    const processedText = this.textProcessingService.process(rawText);
-
-    // 3. VECTORIZATION
-    this.logger.log('Step 3: Generating embeddings from entire processed text...');
-    const textForEmbedding = processedText;
+    this.logger.log('Passo 2: Gerando embeddings do texto bruto normalizado...');
+    const textForEmbedding = rawText
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 3000);
     const embedding = await this.embeddingsService.generateEmbedding(textForEmbedding);
     const vector = JSON.stringify(embedding);
 
-    // 4. PERSIST PETICAO
-    this.logger.log('Step 4: Persisting petition updates (vectors)...');
+    this.logger.log('Passo 3: Persistindo atualizações da petição (vetores)...');
     peticao.resumo = null;
     peticao.teseVetor = vector;
     peticao.questaoVetor = vector;
     await this.peticaoRepository.save(peticao);
 
-    // 5. SEMANTIC SEARCH
-    this.logger.log('Step 5: Searching for similar precedents...');
+    this.logger.log('Passo 4: Buscando precedentes similares...');
     const suggestedPrecedents = await this.semanticSearchService.searchSimilar(embedding);
 
-    // 6. PERSIST SUGGESTIONS
-    this.logger.log('Step 6: Saving suggested precedents to database...');
+    this.logger.log('Passo 5: Salvando precedentes sugeridos no banco de dados...');
     const formattedPrecedents: any[] = [];
 
     for (let i = 0; i < suggestedPrecedents.length; i++) {
@@ -88,7 +80,7 @@ export class PipelineOrchestrator {
       });
     }
 
-    this.logger.log(`Full analysis completed for Petição ID: ${peticaoId}`);
+    this.logger.log(`Análise completa finalizada para Petição ID: ${peticaoId}`);
 
     return {
       peticaoId,
