@@ -8,13 +8,13 @@ export class IndexVetorPrecedente1774799357732 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE precedente ALTER COLUMN questao_vetor TYPE vector(1536);`);
 
         await queryRunner.query(`
-            CREATE INDEX idx_tese 
+            CREATE INDEX IF NOT EXISTS idx_tese 
             ON precedente 
             USING ivfflat (tese_vetor vector_cosine_ops);
         `);
 
         await queryRunner.query(`
-            CREATE INDEX idx_questao 
+            CREATE INDEX IF NOT EXISTS idx_questao 
             ON precedente 
             USING ivfflat (questao_vetor vector_cosine_ops);
         `);
