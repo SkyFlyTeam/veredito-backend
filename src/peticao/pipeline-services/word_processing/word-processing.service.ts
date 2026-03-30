@@ -1,4 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as mammoth from 'mammoth';
 
 // pdf-parse v2 exports a PDFParse class instead of a plain function.
@@ -52,6 +54,35 @@ export class WordProcessingService {
         return this.parseTxt(file.buffer);
       // The default case will never be reached in practice (the validation above guarantees that),
       // but it is good practice to include it to cover all cases in the switch.
+      default:
+        throw new BadRequestException(
+          `Unsupported file type. Accepted formats: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        );
+    }
+  }
+
+  async extractTextFromPath(filePath: string): Promise<string> {
+    if (!fs.existsSync(filePath)) {
+      throw new BadRequestException(`Arquivo não encontrado: ${filePath}`);
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    const originalname = path.basename(filePath);
+    const extension = originalname.split('.').pop()?.toLowerCase();
+
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+      throw new BadRequestException(
+        `Tipo de arquivo não suportado. Formatos aceitos: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    switch (extension) {
+      case 'pdf':
+        return this.parsePdf(buffer);
+      case 'docx':
+        return this.parseDocx(buffer);
+      case 'txt':
+        return this.parseTxt(buffer);
       default:
         throw new BadRequestException(
           `Unsupported file type. Accepted formats: ${ALLOWED_EXTENSIONS.join(', ')}`,

@@ -19,13 +19,13 @@ export class PeticaoEntity {
   caminhoArquivo: string;
 
   @Column({ nullable: true })
-  resumo: string;
+  resumo: string | null;
 
   @Column({ name: 'tese_vetor', nullable: true })
-  teseVetor: string;
+  teseVetor: string | null;
 
   @Column({ name: 'questao_vetor', nullable: true })
-  questaoVetor: string;
+  questaoVetor: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
