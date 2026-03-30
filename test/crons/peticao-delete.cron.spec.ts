@@ -7,15 +7,21 @@ jest.mock('@nestjs/schedule', () => ({
   },
 }), { virtual: true });
 
+jest.mock('../../src/peticao/pipeline-services/word_processing/text-processing.service', () => ({
+  TextProcessingService: class TextProcessingService {},
+}));
+
 import { PeticaoDeleteCronService } from '../../src/crons/jobs/peticao-delete.cron';
 
-type RawId = { id: number };
+type RawPeticao = { id: number; caminhoArquivo?: string };
 
 type QueryBuilderMock = {
   leftJoin: jest.Mock;
   select: jest.Mock;
+  addSelect: jest.Mock;
   where: jest.Mock;
   groupBy: jest.Mock;
+  addGroupBy: jest.Mock;
   having: jest.Mock;
   getRawMany: jest.Mock;
 };
@@ -24,16 +30,20 @@ const createQueryBuilderMock = (): QueryBuilderMock => {
   const qb = {
     leftJoin: jest.fn(),
     select: jest.fn(),
+    addSelect: jest.fn(),
     where: jest.fn(),
     groupBy: jest.fn(),
+    addGroupBy: jest.fn(),
     having: jest.fn(),
-    getRawMany: jest.fn<() => Promise<RawId[]>>(),
+    getRawMany: jest.fn(),
   } as QueryBuilderMock;
 
   qb.leftJoin.mockReturnValue(qb);
   qb.select.mockReturnValue(qb);
+  qb.addSelect.mockReturnValue(qb);
   qb.where.mockReturnValue(qb);
   qb.groupBy.mockReturnValue(qb);
+  qb.addGroupBy.mockReturnValue(qb);
   qb.having.mockReturnValue(qb);
 
   return qb;
@@ -44,19 +54,29 @@ const createRepositoryMock = () => {
 
   return {
     queryBuilder,
-    createQueryBuilder: jest.fn(() => queryBuilder),
-    delete: jest.fn(() => Promise.resolve({ affected: 0 })),
+    createQueryBuilder: jest.fn((_: string) => queryBuilder),
   };
 };
+
+const createPeticaoServiceMock = () => ({
+  deleteManyWithFiles: jest.fn((_: RawPeticao[]) =>
+    Promise.resolve({ deleted: 0, fileDeleteFailures: 0 }),
+  ),
+});
 
 describe('PeticaoDeleteCronService', () => {
   let service: PeticaoDeleteCronService;
   let repository: ReturnType<typeof createRepositoryMock>;
+  let peticaoService: ReturnType<typeof createPeticaoServiceMock>;
 
   beforeEach(() => {
     jest.resetAllMocks();
     repository = createRepositoryMock();
-    service = new PeticaoDeleteCronService(repository as never);
+    peticaoService = createPeticaoServiceMock();
+    service = new PeticaoDeleteCronService(
+      repository as never,
+      peticaoService as never,
+    );
   });
 
   it('should log cron expression on module init', () => {
@@ -72,7 +92,7 @@ describe('PeticaoDeleteCronService', () => {
   });
 
   it('should skip delete when no stale peticoes are found', async () => {
-    repository.queryBuilder.getRawMany.mockResolvedValueOnce([]);
+    (repository.queryBuilder.getRawMany as any).mockResolvedValueOnce([]);
 
     const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {
       return undefined;
@@ -89,13 +109,22 @@ describe('PeticaoDeleteCronService', () => {
       'peticao.createdAt <= :cutoffDate',
       { cutoffDate: expect.any(Date) },
     );
-    expect(repository.delete).not.toHaveBeenCalled();
+    expect(peticaoService.deleteManyWithFiles).not.toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalledWith('No stale peticoes found for deletion.');
   });
 
   it('should delete stale peticoes when ids are found', async () => {
-    repository.queryBuilder.getRawMany.mockResolvedValueOnce([{ id: 1 }, { id: 2 }]);
-    repository.delete.mockResolvedValueOnce({ affected: 2 });
+    const stalePeticoes = [
+      { id: 1, caminhoArquivo: './uploads/peticoes/p1.pdf' },
+      { id: 2, caminhoArquivo: './uploads/peticoes/p2.pdf' },
+    ];
+    (repository.queryBuilder.getRawMany as any).mockResolvedValueOnce(
+      stalePeticoes,
+    );
+    peticaoService.deleteManyWithFiles.mockResolvedValueOnce({
+      deleted: 2,
+      fileDeleteFailures: 0,
+    });
 
     const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation(() => {
       return undefined;
@@ -103,14 +132,18 @@ describe('PeticaoDeleteCronService', () => {
 
     await service.handleCron();
 
-    expect(repository.delete).toHaveBeenCalledWith([1, 2]);
+    expect(peticaoService.deleteManyWithFiles).toHaveBeenCalledWith(
+      stalePeticoes,
+    );
     expect(logSpy).toHaveBeenCalledWith(
-      'Stale peticao cleanup finished. Deleted: 2',
+      'Stale peticao cleanup finished. Deleted: 2. File delete failures: 0',
     );
   });
 
   it('should log error when query fails', async () => {
-    repository.queryBuilder.getRawMany.mockRejectedValueOnce(new Error('boom'));
+    (repository.queryBuilder.getRawMany as any).mockRejectedValueOnce(
+      new Error('boom'),
+    );
 
     const errorSpy = jest
       .spyOn(Logger.prototype, 'error')
@@ -122,6 +155,6 @@ describe('PeticaoDeleteCronService', () => {
       'Error running stale peticao cleanup job',
       expect.any(String),
     );
-    expect(repository.delete).not.toHaveBeenCalled();
+    expect(peticaoService.deleteManyWithFiles).not.toHaveBeenCalled();
   });
 });
