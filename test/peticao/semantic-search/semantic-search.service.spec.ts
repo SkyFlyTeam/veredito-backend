@@ -79,11 +79,11 @@ describe('SemanticSearchService', () => {
 
     const query = mockRepository.query.mock.calls[0][0];
     
-    expect(query).toContain('LEAST(');
     expect(query).toContain('COALESCE(p.tese_vetor <-> $1, 1)');
     expect(query).toContain('COALESCE(p.questao_vetor <-> $1, 1)');
+    expect(query).toContain(') / 2 AS score');
     expect(query).toContain('ORDER BY score ASC');
-    expect(query).toContain('LIMIT 10');
+    expect(query).toContain('LIMIT 20');
   });
 
   it('should handle large embedding arrays', async () => {
