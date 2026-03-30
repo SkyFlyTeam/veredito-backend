@@ -16,6 +16,7 @@ import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
 import { PrecedenteSugeridoEntity } from 'src/precedents/entity/precedente_sugerido.entity';
 import { PeticaoDeleteCronService } from './jobs/peticao-delete.cron';
 import { PeticaoModule } from 'src/peticao/peticao.module';
+import { DeletePeticaoCommand } from './commands/peticao-delete.command';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { PeticaoModule } from 'src/peticao/peticao.module';
     GerarEmbeddingsPrecedenteCron,
     GerarEmbeddingsPrecedenteCommand,
     PeticaoDeleteCronService,
+    DeletePeticaoCommand,
   ],
 })
 export class JobsModule {}
