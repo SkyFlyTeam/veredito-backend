@@ -15,11 +15,13 @@ import { GerarEmbeddingsPrecedenteCommand } from './commands/gerar-embeddings-pr
 import { PeticaoEntity } from 'src/peticao/entity/peticao.entity';
 import { PrecedenteSugeridoEntity } from 'src/precedents/entity/precedente_sugerido.entity';
 import { PeticaoDeleteCronService } from './jobs/peticao-delete.cron';
+import { PeticaoModule } from 'src/peticao/peticao.module';
 
 @Module({
   imports: [
     CommandRunnerModule,
     EmbeddingsModule,
+    PeticaoModule,
     TypeOrmModule.forFeature([
       EspeciePrecedenteEntity,
       TribunalPrecedenteEntity,
