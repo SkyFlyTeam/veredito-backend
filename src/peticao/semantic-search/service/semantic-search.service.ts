@@ -10,7 +10,7 @@ export class SemanticSearchService {
   constructor(
     @InjectRepository(PrecedenteEntity)
     private readonly precedenteRepo: Repository<PrecedenteEntity>,
-  ) {}
+  ) { }
 
   async searchSimilar(embedding: number[]) {
     const vector = JSON.stringify(embedding);
@@ -19,19 +19,29 @@ export class SemanticSearchService {
       `
         SELECT 
           p.*,
-          LEAST(
-            COALESCE(p.tese_vetor <-> $1, 1),
+          (
+            COALESCE(p.tese_vetor <-> $1, 1) +
             COALESCE(p.questao_vetor <-> $1, 1)
-          ) AS score
+          ) / 2 AS score
         FROM precedente p
-        WHERE p.tese_vetor IS NOT NULL 
-           OR p.questao_vetor IS NOT NULL
+        WHERE (p.tese_vetor IS NOT NULL OR p.questao_vetor IS NOT NULL)
+          AND (
+            p.tese ILIKE '%indeniza%'
+            OR p.questao ILIKE '%indeniza%'
+          )
         ORDER BY score ASC
-        LIMIT 10;
+        LIMIT 20; 
         `,
       [vector],
     );
 
-    return result;
+    const unique = new Map();
+    for (const p of result) {
+      if (!unique.has(p.numero_registro)) {
+        unique.set(p.numero_registro, p);
+      }
+    }
+
+    return Array.from(unique.values()).slice(0, 10);
   }
 }

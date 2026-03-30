@@ -28,7 +28,6 @@ import { PipelineOrchestrator } from '../src/peticao/pipeline-services/pipeline_
 
 const wordService = new WordProcessingService();
 const textService = new TextProcessingService();
-const orchestrator = new PipelineOrchestrator(wordService, textService);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -98,7 +97,8 @@ async function main() {
   printSeparator('═');
 
   try {
-    const { rawText, processedText } = await orchestrator.run(multerFile);
+    const rawText = await wordService.extractTextFromPath(filePath);
+    const processedText = textService.process(rawText);
 
     console.log('\n[RAW TEXT — first 400 chars]');
     printSeparator();
