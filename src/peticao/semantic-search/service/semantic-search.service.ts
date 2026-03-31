@@ -18,7 +18,14 @@ export class SemanticSearchService {
     const result = await this.precedenteRepo.query(
       `
         SELECT 
-          p.*,
+          p.id,
+          p.numero_registro,
+          p.tese,
+          p.questao,
+          p.ultima_atualizacao,
+          p.status_id,
+          p.tribunal_id,
+          p.especie_id,
           (
             COALESCE(p.tese_vetor <-> $1, 1) +
             COALESCE(p.questao_vetor <-> $1, 1)
@@ -30,7 +37,7 @@ export class SemanticSearchService {
             OR p.questao ILIKE '%indeniza%'
           )
         ORDER BY score ASC
-        LIMIT 20; 
+        LIMIT 10; 
         `,
       [vector],
     );

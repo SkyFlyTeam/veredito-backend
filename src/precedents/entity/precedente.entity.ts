@@ -30,10 +30,10 @@ export default class PrecedenteEntity implements EntityInterface {
   @Column({ type: 'timestamp' })
   ultima_atualizacao: Date;
 
-  @Column({ type: 'vector', nullable: true })
+  @Column({ type: 'vector', nullable: true, select: false })
   tese_vetor: number[];
 
-  @Column({ type: 'vector', nullable: true })
+  @Column({ type: 'vector', nullable: true, select: false })
   questao_vetor: number[];
 
   @Column({

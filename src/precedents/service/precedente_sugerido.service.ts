@@ -27,9 +27,34 @@ export class PrecedenteSugeridoService {
     return this.precedenteSugeridoRepository.save(precedenteSugerido);
   }
 
+  async createBulk(dtos: CreatePrecedenteSugeridoDto[]): Promise<PrecedenteSugeridoEntity[]> {
+    const entities = dtos.map(dto => this.precedenteSugeridoRepository.create({
+      percentual_similaridade: dto.percentual_similaridade,
+      classificacao: dto.classificacao,
+      sintese_explicativa: dto.sintese_explicativa,
+      precedente: { id: dto.precedente_id } as any,
+      peticao: { id: dto.peticao_id } as any,
+    }));
+
+    return this.precedenteSugeridoRepository.save(entities);
+  }
+
   findAll(): Promise<PrecedenteSugeridoEntity[]> {
     return this.precedenteSugeridoRepository.find({
       relations: ['precedente', 'peticao'],
+    });
+  }
+
+  findByPeticao(peticaoId: number): Promise<PrecedenteSugeridoEntity[]> {
+    return this.precedenteSugeridoRepository.find({
+      where: { peticaoId },
+      relations: [
+        'precedente',
+        'precedente.status',
+        'precedente.tribunal',
+        'precedente.especie',
+      ],
+      order: { classificacao: 'ASC' },
     });
   }
 

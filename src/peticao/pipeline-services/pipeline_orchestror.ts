@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WordProcessingService } from './word_processing/word-processing.service';
 import { PeticaoEntity } from '../entity/peticao.entity';
+import { TextProcessingService } from './word_processing/text-processing.service';
 import { EmbeddingsService } from '../../embeddings/embeddings.service';
 import { SemanticSearchService } from '../semantic-search/service/semantic-search.service';
 import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
@@ -19,6 +20,7 @@ export class PipelineOrchestrator {
 
   constructor(
     private readonly wordProcessingService: WordProcessingService,
+    private readonly textProcessingService: TextProcessingService,
     private readonly embeddingsService: EmbeddingsService,
     private readonly semanticSearchService: SemanticSearchService,
     private readonly precedenteSugeridoService: PrecedenteSugeridoService,
@@ -34,50 +36,74 @@ export class PipelineOrchestrator {
       throw new NotFoundException(`Petição com ID ${peticaoId} não encontrada`);
     }
 
-    this.logger.log('Passo 1: Extraindo texto bruto do arquivo...');
-    const rawText = await this.wordProcessingService.extractTextFromPath(peticao.caminhoArquivo);
-    if (!rawText) {
-      throw new Error('Falha ao extrair texto do arquivo da petição.');
+    let rawText: string;
+    try {
+      this.logger.log('Passo 1: Extraindo texto bruto do arquivo...');
+      rawText = await this.wordProcessingService.extractTextFromPath(peticao.caminhoArquivo);
+      if (!rawText) throw new Error('Falha ao extrair texto do arquivo da petição.');
+    } catch (error) {
+      this.logger.error(`[PASSO 1 - Extração] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
     }
 
-    this.logger.log('Passo 2: Gerando embeddings do texto bruto normalizado...');
-    const textForEmbedding = rawText
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 3000);
-    const embedding = await this.embeddingsService.generateEmbedding(textForEmbedding);
-    const vector = JSON.stringify(embedding);
+    let processedText: string;
+    try {
+      this.logger.log('Passo 2: Processamento NLP...');
+      processedText = this.textProcessingService.process(rawText);
+    } catch (error) {
+      this.logger.error(`[PASSO 2 - NLP] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
+    }
 
-    this.logger.log('Passo 3: Persistindo atualizações da petição (vetores)...');
-    peticao.resumo = null;
-    peticao.teseVetor = vector;
-    peticao.questaoVetor = vector;
-    await this.peticaoRepository.save(peticao);
+    let embedding: number[];
+    let vector: string;
+    try {
+      this.logger.log('Passo 3: Gerando embeddings do texto...');
+      const textForEmbedding = processedText
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 3000);
+      embedding = await this.embeddingsService.generateEmbedding(textForEmbedding);
+      vector = JSON.stringify(embedding);
+    } catch (error) {
+      this.logger.error(`[PASSO 3 - Vetorização] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
+    }
 
-    this.logger.log('Passo 4: Buscando precedentes similares...');
-    const suggestedPrecedents = await this.semanticSearchService.searchSimilar(embedding);
+    try {
+      this.logger.log('Passo 4: Persistindo atualizações da petição (vetores)...');
+      peticao.resumo = null;
+      peticao.teseVetor = vector;
+      peticao.questaoVetor = vector;
+      await this.peticaoRepository.save(peticao);
+    } catch (error) {
+      this.logger.error(`[PASSO 4 - Persistência Petição] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
+    }
 
-    this.logger.log('Passo 5: Salvando precedentes sugeridos no banco de dados...');
-    const formattedPrecedents: any[] = [];
+    let suggestedPrecedents: any[];
+    try {
+      this.logger.log('Passo 5: Buscando precedentes similares...');
+      suggestedPrecedents = await this.semanticSearchService.searchSimilar(embedding);
+    } catch (error) {
+      this.logger.error(`[PASSO 5 - Busca Semântica] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
+    }
 
-    for (let i = 0; i < suggestedPrecedents.length; i++) {
-      const match = suggestedPrecedents[i];
-
-      await this.precedenteSugeridoService.create({
+    try {
+      this.logger.log('Passo 6: Salvando precedentes sugeridos em lote...');
+      const dtos = suggestedPrecedents.map((match, index) => ({
         percentual_similaridade: match.score ? Number(((1 - match.score) * 100).toFixed(2)) : 0,
-        classificacao: i + 1,
+        classificacao: index + 1,
         sintese_explicativa: '',
         precedente_id: match.id,
         peticao_id: peticao.id,
-      });
+      }));
 
-      formattedPrecedents.push({
-        id: match.id,
-        numero_registro: match.numero_registro,
-        tese: match.tese,
-        questao: match.questao,
-        score: match.score,
-      });
+      await this.precedenteSugeridoService.createBulk(dtos);
+    } catch (error) {
+      this.logger.error(`[PASSO 6 - Persistência Sugestões] falhou para Petição ID ${peticaoId}: ${error.message}`);
+      throw error;
     }
 
     this.logger.log(`Análise completa finalizada para Petição ID: ${peticaoId}`);
@@ -85,7 +111,7 @@ export class PipelineOrchestrator {
     return {
       peticaoId,
       resumo: null,
-      precedentes: formattedPrecedents,
+      precedentes: [],
     };
   }
 }
