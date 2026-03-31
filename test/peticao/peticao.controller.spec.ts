@@ -20,11 +20,20 @@ const createPeticaoServiceMock = () => ({
 describe('PeticaoController', () => {
   let controller: PeticaoController;
   let service: ReturnType<typeof createPeticaoServiceMock>;
+  let mockOrchestrator: any;
+  let mockPrecedenteSugeridoService: any;
 
   beforeEach(() => {
     jest.resetAllMocks();
     service = createPeticaoServiceMock();
-    controller = new PeticaoController(service as never);
+    mockOrchestrator = { run: jest.fn() };
+    mockPrecedenteSugeridoService = { findByPeticao: jest.fn() };
+
+    controller = new PeticaoController(
+      service as any,
+      mockOrchestrator,
+      mockPrecedenteSugeridoService,
+    );
   });
 
   describe('findAll', () => {
@@ -56,12 +65,14 @@ describe('PeticaoController', () => {
   describe('uploadFile', () => {
     it('should call service for file upload', async () => {
       const file = { path: 'uploads/file.pdf' } as Express.Multer.File;
-      await controller.uploadFile(file);
+      const mockReq = { user: { id: 1 } };
+      await controller.uploadFile(file, mockReq as any);
       expect(service.create).toHaveBeenCalledWith('uploads/file.pdf', 1);
     });
 
     it('should throw BadRequestException if file is missing', async () => {
-      await expect(controller.uploadFile(null as any)).rejects.toThrow(BadRequestException);
+      const mockReq = { user: { id: 1 } };
+      await expect(controller.uploadFile(null as any, mockReq as any)).rejects.toThrow(BadRequestException);
     });
   });
 });
