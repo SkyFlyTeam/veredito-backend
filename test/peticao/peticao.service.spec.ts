@@ -16,29 +16,32 @@ const makePeticao = (): PeticaoEntity => ({
   id: 1,
   caminhoArquivo: 'path/to/file.pdf',
   resumo: 'Resumo da petição',
-  teseVetor: '',
-  questaoVetor: '',
+  teseVetor: [],
+  questaoVetor: [],
   createdAt: new Date(),
   usuarioId: 1,
   user: null as any,
+  precedenteSugerido: [],
 });
 
 const createPeticaoRepositoryMock = () => ({
-  find: jest.fn((): Promise<PeticaoEntity[]> => Promise.resolve([])),
-  findOne: jest.fn((): Promise<PeticaoEntity | null> => Promise.resolve(null)),
-  create: jest.fn(),
-  save: jest.fn(),
-  delete: jest.fn(() => Promise.resolve({ affected: 0 })),
+  find: jest.fn((_conditions?: any): Promise<PeticaoEntity[]> => Promise.resolve([])),
+  findOne: jest.fn((_conditions?: any): Promise<PeticaoEntity | null> => Promise.resolve(null)),
+  create: jest.fn((_data: any): PeticaoEntity => null as any),
+  save: jest.fn((_entity: any): Promise<PeticaoEntity> => Promise.resolve(null as any)),
+  delete: jest.fn((_ids?: any) => Promise.resolve({ affected: 0 })),
 });
 
 describe('PeticaoService', () => {
   let service: PeticaoService;
   let repository: ReturnType<typeof createPeticaoRepositoryMock>;
+  let mockTextProcessingService: any;
 
   beforeEach(() => {
     jest.resetAllMocks();
     repository = createPeticaoRepositoryMock();
-    service = new PeticaoService(repository as never, {} as never);
+    mockTextProcessingService = { process: jest.fn() };
+    service = new PeticaoService(repository as any, mockTextProcessingService);
   });
 
   describe('findAll', () => {
@@ -83,7 +86,7 @@ describe('PeticaoService', () => {
   });
 
   describe('create', () => {
-    it('should create and save a new petition', async () => {
+    it('should create and save a new petition and return its DTO', async () => {
       const filePath = 'path/to/file.pdf';
       const usuarioId = 1;
       const peticao = makePeticao();
@@ -91,13 +94,20 @@ describe('PeticaoService', () => {
       repository.create.mockReturnValueOnce(peticao);
       repository.save.mockResolvedValueOnce(peticao);
 
-      await service.create(filePath, usuarioId);
+      const result = await service.create(filePath, usuarioId);
 
       expect(repository.create).toHaveBeenCalledWith({
         caminhoArquivo: filePath,
         usuarioId,
       });
       expect(repository.save).toHaveBeenCalledWith(peticao);
+      expect(result).toEqual({
+        id: peticao.id,
+        caminhoArquivo: peticao.caminhoArquivo,
+        resumo: peticao.resumo,
+        createdAt: peticao.createdAt,
+        usuarioId: peticao.usuarioId,
+      });
     });
   });
 

@@ -21,11 +21,11 @@ export class PeticaoEntity {
   @Column({ type: 'text', nullable: true })
   resumo: string | null;
 
-  @Column({ name: 'tese_vetor', type: 'text', nullable: true })
-  teseVetor: string | null;
+  @Column({ name: 'tese_vetor', type: 'vector', nullable: true, select: false })
+  teseVetor: number[] | null;
 
-  @Column({ name: 'questao_vetor', type: 'text', nullable: true })
-  questaoVetor: string | null;
+  @Column({ name: 'questao_vetor', type: 'vector', nullable: true, select: false })
+  questaoVetor: number[] | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

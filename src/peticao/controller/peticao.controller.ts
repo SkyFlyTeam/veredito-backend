@@ -79,8 +79,12 @@ export class PeticaoController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadPeticaoDto })
   @ApiOperation({ summary: 'Fazer upload de uma nova petição' })
-  @ApiResponse({ status: 201, description: 'Petição criada com sucesso' })
-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+  @ApiResponse({
+    status: 201,
+    description: 'Petição criada com sucesso',
+    type: PeticaoResponseDTO,
+  })
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any): Promise<PeticaoResponseDTO> {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
