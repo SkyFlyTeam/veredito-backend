@@ -83,7 +83,7 @@ describe('SemanticSearchService', () => {
     expect(query).toContain('COALESCE(p.questao_vetor <-> $1, 1)');
     expect(query).toContain(') / 2 AS score');
     expect(query).toContain('ORDER BY score ASC');
-    expect(query).toContain('LIMIT 20');
+    expect(query).toContain('LIMIT 10');
   });
 
   it('should handle large embedding arrays', async () => {
