@@ -3,6 +3,9 @@ import * as path from 'path';
 import { Command, CommandRunner } from 'nest-commander';
 import { PipelineOrchestrator } from '../pipeline-services/pipeline_orchestror';
 import { PeticaoService } from '../service/peticao.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserEntity } from '../../account/user/entity/user.entity';
+import { Repository } from 'typeorm';
 
 const DATA_DIR = path.resolve(process.cwd(), 'dev-tools', 'data');
 
@@ -21,6 +24,8 @@ export class RunPipelineCommand extends CommandRunner {
   constructor(
     private readonly orchestrator: PipelineOrchestrator,
     private readonly peticaoService: PeticaoService,
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
   ) {
     super();
   }
@@ -65,7 +70,15 @@ export class RunPipelineCommand extends CommandRunner {
     sep('═');
 
     console.log('\n[INFO] Registering petition in database...');
-    await this.peticaoService.create(filePath, 1);
+    let user = await this.userRepository.findOne({ where: { id: 1 } });
+    if (!user) user = await this.userRepository.findOne({ where: {} });
+
+    if (!user) {
+      console.error('[ERROR] No users found in database. Please create a user first.');
+      process.exit(1);
+    }
+
+    await this.peticaoService.create(filePath, user.id);
 
     const allPeticoes = await this.peticaoService.findAll();
     const peticao = allPeticoes.find(p => p.caminhoArquivo === filePath) || allPeticoes[allPeticoes.length - 1];

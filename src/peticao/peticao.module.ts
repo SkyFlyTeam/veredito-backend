@@ -11,11 +11,12 @@ import { RunPipelineCommand } from './commands/run-pipeline.command';
 import { SemanticSearchModule } from './semantic-search/semantic-search.module';
 import { EmbeddingsModule } from '../embeddings/embeddings.module';
 import { PrecedenteModule } from '../precedents/precedente.module';
+import { UserEntity } from '../account/user/entity/user.entity';
 
 @Module({
   imports: [
     CommandRunnerModule,
-    TypeOrmModule.forFeature([PeticaoEntity]),
+    TypeOrmModule.forFeature([PeticaoEntity, UserEntity]),
     SemanticSearchModule,
     EmbeddingsModule,
     PrecedenteModule,

@@ -9,6 +9,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Req,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,6 +28,7 @@ import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
 import { PipelineOrchestrator, PipelineResult } from '../pipeline-services/pipeline_orchestror';
+import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
 
 @ApiTags('Petições')
 @ApiBearerAuth('access-token')
@@ -36,7 +38,8 @@ export class PeticaoController {
   constructor(
     private readonly peticaoService: PeticaoService,
     private readonly orchestrator: PipelineOrchestrator,
-  ) {}
+    private readonly precedenteSugeridoService: PrecedenteSugeridoService,
+  ) { }
 
   @Post('upload')
   @HttpCode(201)
@@ -77,12 +80,17 @@ export class PeticaoController {
   @ApiBody({ type: UploadPeticaoDto })
   @ApiOperation({ summary: 'Fazer upload de uma nova petição' })
   @ApiResponse({ status: 201, description: 'Petição criada com sucesso' })
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
-    return this.peticaoService.create(file.path, 1);
+    const usuarioId = req.user?.id || req.user?.userId;
+    if (!usuarioId) {
+      throw new BadRequestException('Usuário não autenticado');
+    }
+
+    return this.peticaoService.create(file.path, usuarioId);
   }
 
   @Get()
@@ -115,6 +123,13 @@ export class PeticaoController {
     description: 'Análise concluída com sucesso',
   })
   async analisar(@Param('id', ParseIntPipe) id: number): Promise<PipelineResult> {
-    return this.orchestrator.run(id);
+    const pipelineResult = await this.orchestrator.run(id);
+
+    const detailedPrecedents = await this.precedenteSugeridoService.findByPeticao(id);
+
+    return {
+      ...pipelineResult,
+      precedentes: detailedPrecedents,
+    };
   }
 }
