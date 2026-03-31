@@ -18,26 +18,16 @@ export class SemanticSearchService {
     const result = await this.precedenteRepo.query(
       `
         SELECT 
-          p.id,
-          p.numero_registro,
-          p.tese,
-          p.questao,
-          p.ultima_atualizacao,
-          p.status_id,
-          p.tribunal_id,
-          p.especie_id,
-          (
-            COALESCE(p.tese_vetor <-> $1, 1) +
+          p.*,
+          LEAST(
+            COALESCE(p.tese_vetor <-> $1, 1),
             COALESCE(p.questao_vetor <-> $1, 1)
-          ) / 2 AS score
+          ) AS score
         FROM precedente p
-        WHERE (p.tese_vetor IS NOT NULL OR p.questao_vetor IS NOT NULL)
-          AND (
-            p.tese ILIKE '%indeniza%'
-            OR p.questao ILIKE '%indeniza%'
-          )
+        WHERE p.tese_vetor IS NOT NULL 
+           OR p.questao_vetor IS NOT NULL
         ORDER BY score ASC
-        LIMIT 10; 
+        LIMIT 10;
         `,
       [vector],
     );

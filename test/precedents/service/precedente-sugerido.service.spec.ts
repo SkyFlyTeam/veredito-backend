@@ -14,15 +14,16 @@ describe('PrecedenteSugeridoService', () => {
 
   const mockPrecedente: PrecedenteEntity = {
     id: 1,
-    numero_registro: 12345,
+    numero_registro: '12345',
     tese: 'Tese do precedente',
-    tese_vetor: 'tese vetor',
-    questao_vetor: 'questao vetor',
+    questao: 'Questao do precedente',
+    tese_vetor: [],
+    questao_vetor: [],
     ultima_atualizacao: new Date(),
     createdAt: new Date(),
-    status: { id: 1, nome: 'Ativo' },
-    tribunal: { id: 1, nome: 'TJ', sigla: 'TJ' },
-    especie: { id: 1, nome: 'HC', sigla: 'HC' },
+    status: { id: 1, nome: 'Ativo', precedente: [] } as any,
+    tribunal: { id: 1, nome: 'TJ', sigla: 'TJ', precedente: [] } as any,
+    especie: { id: 1, nome: 'HC', sigla: 'HC', precedente: [] } as any,
     precedenteSugerido: [],
   };
 
@@ -30,8 +31,8 @@ describe('PrecedenteSugeridoService', () => {
     id: 1,
     caminhoArquivo: 'path/to/file.pdf',
     resumo: 'Resumo da petição',
-    teseVetor: 'tese vetor',
-    questaoVetor: 'questao vetor',
+    teseVetor: [],
+    questaoVetor: [],
     createdAt: new Date(),
     usuarioId: 1,
     user: {
@@ -44,7 +45,8 @@ describe('PrecedenteSugeridoService', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       peticoes: [],
-    },
+    } as any,
+    precedenteSugerido: [],
   };
 
   const mockPrecedenteSugerido: PrecedenteSugeridoEntity = {
@@ -52,6 +54,8 @@ describe('PrecedenteSugeridoService', () => {
     percentual_similaridade: 85.5,
     classificacao: 4,
     sintese_explicativa: 'Síntese explicativa do precedente',
+    precedenteId: 1,
+    peticaoId: 1,
     precedente: mockPrecedente,
     peticao: mockPeticao,
   };
@@ -128,7 +132,13 @@ describe('PrecedenteSugeridoService', () => {
       const result = await service.findAll();
 
       expect(repository.find).toHaveBeenCalledWith({
-        relations: ['precedente', 'peticao'],
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+          'peticao',
+        ],
       });
       expect(result).toEqual(mockPrecedentesSugeridos);
     });
@@ -139,7 +149,13 @@ describe('PrecedenteSugeridoService', () => {
       const result = await service.findAll();
 
       expect(repository.find).toHaveBeenCalledWith({
-        relations: ['precedente', 'peticao'],
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+          'peticao',
+        ],
       });
       expect(result).toEqual([]);
     });
@@ -153,7 +169,13 @@ describe('PrecedenteSugeridoService', () => {
 
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
-        relations: ['precedente', 'peticao'],
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+          'peticao',
+        ],
       });
       expect(result).toEqual(mockPrecedenteSugerido);
     });
@@ -165,7 +187,13 @@ describe('PrecedenteSugeridoService', () => {
 
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: 999 },
-        relations: ['precedente', 'peticao'],
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+          'peticao',
+        ],
       });
       expect(result).toBeNull();
     });
@@ -177,7 +205,13 @@ describe('PrecedenteSugeridoService', () => {
 
       expect(repository.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
-        relations: ['precedente', 'peticao'],
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+          'peticao',
+        ],
       });
     });
   });

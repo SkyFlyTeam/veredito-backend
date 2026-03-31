@@ -32,12 +32,13 @@ export class PeticaoService {
     return this.mapToResponseDTO(peticao);
   }
 
-  async create(filePath: string, usuarioId: number): Promise<void> {
+  async create(filePath: string, usuarioId: number): Promise<PeticaoResponseDTO> {
     const peticao = this.peticaoRepository.create({
       caminhoArquivo: filePath,
       usuarioId,
     });
-    await this.peticaoRepository.save(peticao);
+    const savedPeticao = await this.peticaoRepository.save(peticao);
+    return this.mapToResponseDTO(savedPeticao);
   }
 
   async deleteManyWithFiles(

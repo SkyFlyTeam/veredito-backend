@@ -90,8 +90,8 @@ describe('PipelineOrchestrator', () => {
       expect(mockPeticaoRepository.save).toHaveBeenCalledWith({
         ...mockPeticao,
         resumo: null,
-        teseVetor: mockVectorStr,
-        questaoVetor: mockVectorStr,
+        teseVetor: mockEmbedding,
+        questaoVetor: mockEmbedding,
       });
 
       expect(mockSemanticSearchService.searchSimilar).toHaveBeenCalledWith(mockEmbedding);
