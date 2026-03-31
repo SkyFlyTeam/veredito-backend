@@ -41,7 +41,13 @@ export class PrecedenteSugeridoService {
 
   findAll(): Promise<PrecedenteSugeridoEntity[]> {
     return this.precedenteSugeridoRepository.find({
-      relations: ['precedente', 'peticao'],
+      relations: [
+        'precedente',
+        'precedente.status',
+        'precedente.tribunal',
+        'precedente.especie',
+        'peticao',
+      ],
     });
   }
 
@@ -61,7 +67,13 @@ export class PrecedenteSugeridoService {
   findOne(id: string | number): Promise<PrecedenteSugeridoEntity | null> {
     return this.precedenteSugeridoRepository.findOne({
       where: { id: Number(id) },
-      relations: ['precedente', 'peticao'],
+      relations: [
+        'precedente',
+        'precedente.status',
+        'precedente.tribunal',
+        'precedente.especie',
+        'peticao',
+      ],
     });
   }
 

@@ -56,7 +56,6 @@ export class PipelineOrchestrator {
     }
 
     let embedding: number[];
-    let vector: string;
     try {
       this.logger.log('Passo 3: Gerando embeddings do texto...');
       const textForEmbedding = processedText
@@ -64,7 +63,6 @@ export class PipelineOrchestrator {
         .trim()
         .slice(0, 3000);
       embedding = await this.embeddingsService.generateEmbedding(textForEmbedding);
-      vector = JSON.stringify(embedding);
     } catch (error) {
       this.logger.error(`[PASSO 3 - Vetorização] falhou para Petição ID ${peticaoId}: ${error.message}`);
       throw error;
@@ -73,8 +71,8 @@ export class PipelineOrchestrator {
     try {
       this.logger.log('Passo 4: Persistindo atualizações da petição (vetores)...');
       peticao.resumo = null;
-      peticao.teseVetor = vector;
-      peticao.questaoVetor = vector;
+      peticao.teseVetor = embedding;
+      peticao.questaoVetor = embedding;
       await this.peticaoRepository.save(peticao);
     } catch (error) {
       this.logger.error(`[PASSO 4 - Persistência Petição] falhou para Petição ID ${peticaoId}: ${error.message}`);

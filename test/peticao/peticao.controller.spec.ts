@@ -14,7 +14,7 @@ const makePeticaoResponse = (): PeticaoResponseDTO => ({
 const createPeticaoServiceMock = () => ({
   findAll: jest.fn((): Promise<PeticaoResponseDTO[]> => Promise.resolve([])),
   findOne: jest.fn((): Promise<PeticaoResponseDTO> => Promise.resolve(makePeticaoResponse())),
-  create: jest.fn((): Promise<void> => Promise.resolve()),
+  create: jest.fn((): Promise<PeticaoResponseDTO> => Promise.resolve(makePeticaoResponse())),
 });
 
 describe('PeticaoController', () => {
@@ -63,11 +63,16 @@ describe('PeticaoController', () => {
   });
 
   describe('uploadFile', () => {
-    it('should call service for file upload', async () => {
+    it('should call service for file upload and return the created petition', async () => {
       const file = { path: 'uploads/file.pdf' } as Express.Multer.File;
       const mockReq = { user: { id: 1 } };
-      await controller.uploadFile(file, mockReq as any);
+      const expectedResponse = makePeticaoResponse();
+      service.create.mockResolvedValueOnce(expectedResponse);
+      
+      const result = await controller.uploadFile(file, mockReq as any);
+      
       expect(service.create).toHaveBeenCalledWith('uploads/file.pdf', 1);
+      expect(result).toEqual(expectedResponse);
     });
 
     it('should throw BadRequestException if file is missing', async () => {

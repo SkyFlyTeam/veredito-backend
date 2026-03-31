@@ -81,7 +81,8 @@ describe('SemanticSearchService', () => {
     
     expect(query).toContain('COALESCE(p.tese_vetor <-> $1, 1)');
     expect(query).toContain('COALESCE(p.questao_vetor <-> $1, 1)');
-    expect(query).toContain(') / 2 AS score');
+    expect(query).toContain('LEAST(');
+    expect(query).toContain(') AS score');
     expect(query).toContain('ORDER BY score ASC');
     expect(query).toContain('LIMIT 10');
   });
