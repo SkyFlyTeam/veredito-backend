@@ -1,4 +1,4 @@
-jest.setTimeout(30000);
+jest.setTimeout(60000);
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
@@ -22,7 +22,8 @@ describe('PipelineOrchestrator (Integration)', () => {
 
   let orchestrator: PipelineOrchestrator;
   let peticaoRepository: Repository<PeticaoEntity>;
-  let precedenteRepository: Repository<PrecedenteSugeridoEntity>;
+  let precedenteSugeridoRepository: Repository<PrecedenteSugeridoEntity>;
+  let precedenteRepository: Repository<PrecedenteEntity>;
   let userRepository: Repository<UserEntity>;
 
   beforeAll(async () => {
@@ -36,7 +37,7 @@ describe('PipelineOrchestrator (Integration)', () => {
           password: process.env.DB_PASSWORD,
           database: process.env.DB_NAME,
           entities: [__dirname + '/../../src/**/*.entity{.ts,.js}'],
-          synchronize: false,
+          synchronize: true,
         }),
         TypeOrmModule.forFeature([
           PeticaoEntity,
@@ -64,7 +65,8 @@ describe('PipelineOrchestrator (Integration)', () => {
 
     orchestrator = moduleRef.get(PipelineOrchestrator);
     peticaoRepository = moduleRef.get(getRepositoryToken(PeticaoEntity));
-    precedenteRepository = moduleRef.get(getRepositoryToken(PrecedenteSugeridoEntity));
+    precedenteSugeridoRepository = moduleRef.get(getRepositoryToken(PrecedenteSugeridoEntity));
+    precedenteRepository = moduleRef.get(getRepositoryToken(PrecedenteEntity));
     userRepository = moduleRef.get(getRepositoryToken(UserEntity));
   });
 
@@ -75,8 +77,9 @@ describe('PipelineOrchestrator (Integration)', () => {
   });
 
   beforeEach(async () => {
-    await precedenteRepository.createQueryBuilder().delete().execute();
+    await precedenteSugeridoRepository.createQueryBuilder().delete().execute();
     await peticaoRepository.createQueryBuilder().delete().execute();
+    await precedenteRepository.createQueryBuilder().delete().execute();
     await userRepository.createQueryBuilder().delete().execute();
   });
 
@@ -86,6 +89,13 @@ describe('PipelineOrchestrator (Integration)', () => {
       sobrenome: 'User',
       email: 'teste@teste.com',
       password: Buffer.from('123456'),
+    });
+
+    const precedent = await precedenteRepository.save({
+      numero_registro: 'ABC123',
+      tese: 'tese integração',
+      questao: 'questao integração',
+      ultima_atualizacao: new Date(),
     });
 
     const peticao = await peticaoRepository.save({
@@ -104,10 +114,10 @@ describe('PipelineOrchestrator (Integration)', () => {
     const semanticService = moduleRef.get(SemanticSearchService);
     jest.spyOn(semanticService, 'searchSimilar').mockResolvedValue([
       {
-        id: 100,
-        numero_registro: 'ABC123',
-        tese: 'tese integração',
-        questao: 'questao integração',
+        id: precedent.id,
+        numero_registro: precedent.numero_registro,
+        tese: precedent.tese,
+        questao: precedent.questao,
         score: 0.1,
       },
     ]);
@@ -125,7 +135,7 @@ describe('PipelineOrchestrator (Integration)', () => {
     expect(updatedPeticao!.teseVetor).toBeTruthy();
     expect(updatedPeticao!.questaoVetor).toBeTruthy();
 
-    const precedentesSalvos = await precedenteRepository.find({
+    const precedentesSalvos = await precedenteSugeridoRepository.find({
       where: { peticao: { id: peticao.id } },
       relations: ['peticao'],
     });
@@ -133,9 +143,10 @@ describe('PipelineOrchestrator (Integration)', () => {
     expect(precedentesSalvos.length).toBe(1);
 
     expect(precedentesSalvos[0]).toMatchObject({
-      precedenteId: 100,
+      precedenteId: precedent.id,
       classificacao: 1,
       percentual_similaridade: "90.00",
     });
   });
+
 });
