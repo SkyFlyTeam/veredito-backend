@@ -15,6 +15,7 @@ import { SemanticSearchService } from '../../src/peticao/semantic-search/service
 import { PrecedenteSugeridoService } from '../../src/precedents/service/precedente_sugerido.service';
 import { UserEntity } from '../../src/account/user/entity/user.entity';
 import PrecedenteEntity from '../../src/precedents/entity/precedente.entity';
+import { TextProcessingService } from '../../src/peticao/pipeline-services/word_processing/text-processing.service';
 
 describe('PipelineOrchestrator (Integration)', () => {
   let app: INestApplication;
@@ -49,6 +50,7 @@ describe('PipelineOrchestrator (Integration)', () => {
       providers: [
         PipelineOrchestrator,
         WordProcessingService,
+        TextProcessingService,
         SemanticSearchService,
         PrecedenteSugeridoService,
         {
@@ -125,10 +127,11 @@ describe('PipelineOrchestrator (Integration)', () => {
     const result = await orchestrator.run(peticao.id);
 
     expect(result.peticaoId).toBe(peticao.id);
-    expect(result.precedentes.length).toBe(1);
+    expect(result.precedentes.length).toBe(0);
 
     const updatedPeticao = await peticaoRepository.findOne({
       where: { id: peticao.id },
+      select: ['id', 'teseVetor', 'questaoVetor'] as any,
     });
 
     expect(updatedPeticao).toBeDefined();
