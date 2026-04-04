@@ -61,7 +61,7 @@ export class PeticaoController {
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|docx|txt)$/)) {
+        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
           return cb(
             new BadRequestException(
               'Apenas arquivos .pdf, .docx e .txt são permitidos',
