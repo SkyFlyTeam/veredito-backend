@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable } from '@nestjs/common';
@@ -10,7 +11,7 @@ export class SemanticSearchService {
   constructor(
     @InjectRepository(PrecedenteEntity)
     private readonly precedenteRepo: Repository<PrecedenteEntity>,
-  ) { }
+  ) {}
 
   async searchSimilar(embedding: number[]) {
     const vector = JSON.stringify(embedding);
@@ -19,16 +20,16 @@ export class SemanticSearchService {
       `
         SELECT 
           p.*,
-          LEAST(
-            COALESCE(p.tese_vetor <-> $1, 1),
-            COALESCE(p.questao_vetor <-> $1, 1)
+          1 - LEAST(
+            COALESCE(p.tese_vetor <=> $1::vector, 1),
+            COALESCE(p.questao_vetor <=> $1::vector, 1)
           ) AS score
         FROM precedente p
         WHERE p.tese_vetor IS NOT NULL 
            OR p.questao_vetor IS NOT NULL
-        ORDER BY score ASC
+        ORDER BY score DESC
         LIMIT 10;
-        `,
+      `,
       [vector],
     );
 

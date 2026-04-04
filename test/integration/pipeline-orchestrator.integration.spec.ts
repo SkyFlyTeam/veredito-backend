@@ -148,7 +148,7 @@ describe('PipelineOrchestrator (Integration)', () => {
     expect(precedentesSalvos[0]).toMatchObject({
       precedenteId: precedent.id,
       classificacao: 1,
-      percentual_similaridade: "90.00",
+      percentual_similaridade: "55.00",
     });
   });
 
