@@ -91,7 +91,9 @@ export class PipelineOrchestrator {
     try {
       this.logger.log('Passo 6: Salvando precedentes sugeridos em lote...');
       const dtos = suggestedPrecedents.map((match, index) => ({
-        percentual_similaridade: match.score ? Number(((1 - match.score) * 100).toFixed(2)) : 0,
+        percentual_similaridade: match.score
+          ? Number((((match.score + 1) / 2) * 100).toFixed(2))
+          : 0,
         classificacao: index + 1,
         sintese_explicativa: '',
         precedente_id: match.id,

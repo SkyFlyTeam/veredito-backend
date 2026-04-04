@@ -15,7 +15,8 @@ docker compose run --rm --service-ports app
 ## Execução de testes
 
 ```bash
-docker compose run --rm app npm run test:cov
+docker compose -f docker-compose-test.yml build app-test
+docker compose -f docker-compose-test.yml run --rm app-test npm run test:cov
 ```
 
 ## Execução de migrações

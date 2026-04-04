@@ -98,14 +98,14 @@ describe('PipelineOrchestrator', () => {
 
       expect(mockPrecedenteSugeridoService.createBulk).toHaveBeenCalledWith([
         {
-          percentual_similaridade: 90,
+          percentual_similaridade: 55,
           classificacao: 1,
           sintese_explicativa: '',
           precedente_id: 10,
           peticao_id: 1,
         },
         {
-          percentual_similaridade: 80,
+          percentual_similaridade: 60,
           classificacao: 2,
           sintese_explicativa: '',
           precedente_id: 20,
