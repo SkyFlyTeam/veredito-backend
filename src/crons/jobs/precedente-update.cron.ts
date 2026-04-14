@@ -13,6 +13,7 @@ import { EspeciePrecedenteEntity } from 'src/precedents/entity/especie_precedent
 import PrecedenteEntity from 'src/precedents/entity/precedente.entity';
 import { StatusPrecedenteEntity } from 'src/precedents/entity/status_precedente.entity';
 import { TribunalPrecedenteEntity } from 'src/precedents/entity/tribunal_precedente.entity';
+import normalize from '../helpers/text-normalizer';
 
 @Injectable()
 export class PrecedenteUpdateService {
@@ -123,12 +124,12 @@ export class PrecedenteUpdateService {
 
         // 🔹 Process each precedente
         for (const p of data.resultados) {
-          let entity = precedenteMap.get(p.id);
+          let entity = precedenteMap.get(String(p.id));
 
-          const situacao = p.situacao?.toLowerCase();
+          const situacao = normalize(p.situacao || '');
 
           let resolvedStatus = statusList.find((s) =>
-            situacao?.includes(s.nome.toLowerCase()),
+            situacao?.includes(normalize(s.nome)),
           );
 
           if (!resolvedStatus) {
