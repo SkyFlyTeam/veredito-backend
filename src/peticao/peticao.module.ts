@@ -7,6 +7,7 @@ import { PeticaoController } from './controller/peticao.controller';
 import { WordProcessingService } from './pipeline-services/word_processing/word-processing.service';
 import { TextProcessingService } from './pipeline-services/word_processing/text-processing.service';
 import { PipelineOrchestrator } from './pipeline-services/pipeline_orchestror';
+import { SummaryService } from './pipeline-services/summary/summary.service';
 import { RunPipelineCommand } from './commands/run-pipeline.command';
 import { SemanticSearchModule } from './semantic-search/semantic-search.module';
 import { EmbeddingsModule } from '../embeddings/embeddings.module';
@@ -26,6 +27,7 @@ import { UserEntity } from '../account/user/entity/user.entity';
     PeticaoService,
     WordProcessingService,
     TextProcessingService,
+    SummaryService,
     PipelineOrchestrator,
     RunPipelineCommand,
   ],
@@ -33,6 +35,7 @@ import { UserEntity } from '../account/user/entity/user.entity';
     PeticaoService,
     WordProcessingService,
     TextProcessingService,
+    SummaryService,
     PipelineOrchestrator,
   ],
 })
