@@ -6,6 +6,12 @@ import OpenAI from 'openai';
 export interface PeticaoSummary {
   teseJuridica: string;
   solicitacaoPedido: string;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+    elapsedMs: number;
+  };
 }
 
 @Injectable()
@@ -32,6 +38,7 @@ export class SummaryService {
     );
 
     const prompt = this.buildPrompt(rawText);
+    const start = Date.now();
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -52,7 +59,18 @@ export class SummaryService {
     });
 
     const content = response.choices[0]?.message?.content ?? '';
-    return this.parseResponse(content);
+    const elapsedMs = Date.now() - start;
+    const parsed = this.parseResponse(content);
+
+    return {
+      ...parsed,
+      usage: {
+        promptTokens: response.usage?.prompt_tokens ?? 0,
+        completionTokens: response.usage?.completion_tokens ?? 0,
+        totalTokens: response.usage?.total_tokens ?? 0,
+        elapsedMs,
+      },
+    };
   }
 
   private buildPrompt(rawText: string): string {
@@ -68,7 +86,7 @@ export class SummaryService {
     );
   }
 
-  private parseResponse(content: string): PeticaoSummary {
+  private parseResponse(content: string): Pick<PeticaoSummary, 'teseJuridica' | 'solicitacaoPedido'> {
     const teseMatch = content.match(
       /TESE JUR[IÍ]DICA:\s*([\s\S]*?)(?=SOLICITA[ÇC][ÃA]O\/PEDIDO:|$)/i,
     );
