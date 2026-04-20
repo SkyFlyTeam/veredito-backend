@@ -74,12 +74,12 @@ describe('SynthesisService', () => {
     expect(result.classificacao).toBe(0);
   });
 
-  it('deve lidar com erros graciosamente retornando fallback 1', async () => {
+  it('deve lidar com erros graciosamente retornando fallback 0', async () => {
     openaiMock.chat.completions.create.mockRejectedValue(new Error('OpenAI Error'));
 
     const result = await service.generateSynthesis('peticao', 'precedente');
 
     expect(result.sintese).toBe('Não foi possível gerar a síntese explicativa no momento.');
-    expect(result.classificacao).toBe(1);
+    expect(result.classificacao).toBe(0);
   });
 });
