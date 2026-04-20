@@ -9,6 +9,7 @@ import { PrecedenteModule } from './precedents/precedente.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { JobsModule } from './crons/jobcron.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
+import { SynthesisModule } from './synthesis/synthesis.module';
 
 @Module({
   imports: [
@@ -30,8 +31,9 @@ import { EmbeddingsModule } from './embeddings/embeddings.module';
     PrecedenteModule,
     JobsModule,
     EmbeddingsModule,
+    SynthesisModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
