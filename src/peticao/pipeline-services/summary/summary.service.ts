@@ -1,17 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 
 export interface PeticaoSummary {
   teseJuridica: string;
   solicitacaoPedido: string;
-  usage: {
-    promptTokens: number;
-    completionTokens: number;
-    totalTokens: number;
-    elapsedMs: number;
-  };
 }
 
 @Injectable()
@@ -38,7 +30,6 @@ export class SummaryService {
     );
 
     const prompt = this.buildPrompt(rawText);
-    const start = Date.now();
 
     const response = await this.openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -59,18 +50,7 @@ export class SummaryService {
     });
 
     const content = response.choices[0]?.message?.content ?? '';
-    const elapsedMs = Date.now() - start;
-    const parsed = this.parseResponse(content);
-
-    return {
-      ...parsed,
-      usage: {
-        promptTokens: response.usage?.prompt_tokens ?? 0,
-        completionTokens: response.usage?.completion_tokens ?? 0,
-        totalTokens: response.usage?.total_tokens ?? 0,
-        elapsedMs,
-      },
-    };
+    return this.parseResponse(content);
   }
 
   private buildPrompt(rawText: string): string {

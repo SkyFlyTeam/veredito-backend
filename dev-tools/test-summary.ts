@@ -82,13 +82,6 @@ async function main() {
   console.log(`\n→ Linhas reais (\\n): ${summary.solicitacaoPedido.split('\n').length}`);
 
   printSeparator('═');
-  console.log('MÉTRICAS');
-  printSeparator('═');
-  console.log(`Tempo de processamento : ${summary.usage.elapsedMs} ms`);
-  console.log(`Tokens de entrada      : ${summary.usage.promptTokens}`);
-  console.log(`Tokens de saída        : ${summary.usage.completionTokens}`);
-  console.log(`Total de tokens        : ${summary.usage.totalTokens}`);
-  printSeparator('═');
 }
 
 main().catch((err) => {
