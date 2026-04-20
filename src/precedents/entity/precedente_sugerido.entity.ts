@@ -21,7 +21,7 @@ export class PrecedenteSugeridoEntity implements EntityInterface {
   @Column()
   classificacao: number;
 
-  @Column({ length: 500 })
+  @Column({ length: 1000 })
   sintese_explicativa: string;
 
   @Column({ name: 'precedente_id' })

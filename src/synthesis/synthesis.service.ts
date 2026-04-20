@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
+import { ClassificacaoAderencia } from '../precedents/enumerator/classificacao-aderencia.enumerator';
 
 export interface SynthesisResponse {
   sintese: string;
-  classificacao: number; // ENUM (0: Não Aplicável, 1: Possivelmente Aplicável, 2: Aplicável)
+  classificacao: ClassificacaoAderencia;
 }
 
 @Injectable()
@@ -27,11 +28,12 @@ Sua tarefa é gerar uma síntese explicativa da correlação jurídica entre uma
 
 Regras de Geração da Síntese:
 1. Máximo de 4 linhas.
-2. Texto em parágrafo único.
-3. Linguagem jurídica, objetiva e técnica.
-4. Foco exclusivo na correlação entre petição e precedente.
-5. Deve indicar a similaridade fática e/ou jurídica, a aplicabilidade do precedente ao caso concreto e a relação entre a tese do precedente e o pedido da petição.
-6. Proibido listas, comentários extras, opiniões pessoais ou explicações fora da correlação jurídica.
+2. Limite rigoroso de 950 caracteres.
+3. Texto em parágrafo único.
+4. Linguagem jurídica, objetiva e técnica.
+5. Foco exclusivo na correlação entre petição e precedente.
+6. Deve indicar a similaridade fática e/ou jurídica, a aplicabilidade do precedente ao caso concreto e a relação entre a tese do precedente e o pedido da petição.
+7. Proibido listas, comentários extras, opiniões pessoais ou explicações fora da correlação jurídica.
 
 Regras de Classificação:
 Selecione EXATAMENTE uma das opções abaixo:
@@ -67,31 +69,31 @@ Precedente: ${precedente.substring(0, 4000)}`;
       const result = JSON.parse(content);
 
       return {
-        sintese: (result.sintese || '').replace(/\n+/g, ' ').substring(0, 500),
+        sintese: (result.sintese || '').replace(/\n+/g, ' ').trim(),
         classificacao: this.mapClassificacaoToEnum(result.classificacao),
       };
     } catch (error) {
       this.logger.error('Error generating synthesis and classification with OpenAI', error.stack);
       return {
         sintese: 'Não foi possível gerar a síntese explicativa no momento.',
-        classificacao: 0,
+        classificacao: ClassificacaoAderencia.NAO_APLICAVEL,
       };
     }
   }
 
-  private mapClassificacaoToEnum(value: string): number {
+  private mapClassificacaoToEnum(value: string): ClassificacaoAderencia {
     const lowerValue = value?.toLowerCase() || '';
 
     if (lowerValue.includes('aplicável') && !lowerValue.includes('não') && !lowerValue.includes('possivelmente')) {
-      return 2;
+      return ClassificacaoAderencia.APLICAVEL;
     }
     if (lowerValue.includes('possivelmente')) {
-      return 1;
+      return ClassificacaoAderencia.POSSIVELMENTE_APLICAVEL;
     }
     if (lowerValue.includes('não')) {
-      return 0;
+      return ClassificacaoAderencia.NAO_APLICAVEL;
     }
 
-    return 0;
+    return ClassificacaoAderencia.NAO_APLICAVEL;
   }
 }
