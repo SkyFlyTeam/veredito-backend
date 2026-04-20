@@ -12,6 +12,7 @@ import { SemanticSearchModule } from './semantic-search/semantic-search.module';
 import { EmbeddingsModule } from '../embeddings/embeddings.module';
 import { PrecedenteModule } from '../precedents/precedente.module';
 import { UserEntity } from '../account/user/entity/user.entity';
+import { SynthesisModule } from '../synthesis/synthesis.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { UserEntity } from '../account/user/entity/user.entity';
     SemanticSearchModule,
     EmbeddingsModule,
     PrecedenteModule,
+    SynthesisModule,
   ],
   controllers: [PeticaoController],
   providers: [
@@ -36,4 +38,4 @@ import { UserEntity } from '../account/user/entity/user.entity';
     PipelineOrchestrator,
   ],
 })
-export class PeticaoModule {}
+export class PeticaoModule { }
