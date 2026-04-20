@@ -42,7 +42,7 @@ export class UpdatePrecedenteSugeridoDto {
   @ApiProperty({
     example: 'Síntese explicativa do precedente sugerido',
     description: 'Síntese explicativa do precedente',
-    maxLength: 500,
+    maxLength: 1000,
   })
   sintese_explicativa?: string;
 
