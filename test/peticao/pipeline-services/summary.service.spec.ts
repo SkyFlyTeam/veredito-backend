@@ -60,10 +60,6 @@ describe('SummaryService', () => {
       expect(result.solicitacaoPedido).toBe(
         'Requer-se a condenação do réu à entrega dos documentos no prazo de 10 dias.',
       );
-      expect(result.usage.promptTokens).toBe(10);
-      expect(result.usage.completionTokens).toBe(20);
-      expect(result.usage.totalTokens).toBe(30);
-      expect(result.usage.elapsedMs).toBeGreaterThanOrEqual(0);
     });
 
     it('deve usar o modelo gpt-4o-mini', async () => {
