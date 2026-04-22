@@ -15,26 +15,22 @@ const makeSearchEvent = (): SearchEvent => ({
     precedents: [
       {
         id: 1,
-        titulo: 'Ação civil ordinária',
-        ementa: 'Contrato de compra e venda',
-        data: '2023-01-15',
+        numero_registro: '0000001-00.0000.0.00000',
+        tese: 'Tese do precedente 1',
+        questao: 'Questão jurídica do precedente 1',
+        percentual_similaridade: 0.92,
         tribunal: 'TJ-SP',
-        numero: '1234567',
-        similarityScore: 0.92,
-        synthesisStatus: 'pending',
       },
       {
         id: 2,
-        titulo: 'Ação de rescisão contratual',
-        ementa: 'Rescisão de contrato de venda',
-        data: '2023-02-20',
+        numero_registro: '0000002-00.0000.0.00000',
+        tese: 'Tese do precedente 2',
+        questao: 'Questão jurídica do precedente 2',
+        percentual_similaridade: 0.88,
         tribunal: 'TJ-RJ',
-        numero: '7654321',
-        similarityScore: 0.88,
-        synthesisStatus: 'pending',
       },
     ],
-    totalFound: 2,
+    totalFound: 10,
     averageSimilarityScore: 0.9,
   },
 });
@@ -45,14 +41,9 @@ const makeSynthesisEvent = (precedentId: number): SynthesisEvent => ({
   timestamp: new Date(),
   data: {
     precedentId,
-    synthesis: `Análise do precedente ${precedentId}. Este precedente trata de ação civil ordinária...`,
-    classification: {
-      relevance: 'high',
-      applicability: true,
-      confidence: 0.95,
-      reason: 'Precedente altamente similar ao caso analisado',
-    },
-    synthesisTimeMs: 5234,
+    percentual_similaridade: 0.95,
+    classificacao: 1,
+    sintese_explicativa: 'Síntese do precedente com análise completa da jurisprudência aplicável',
   },
 });
 
@@ -187,52 +178,38 @@ describe('PeticaoStreamController', () => {
       });
     });
 
-    it('should validate search event has 150 precedents structure', (done) => {
+    it('should validate search event structure', (done) => {
       const searchEvent = makeSearchEvent();
 
-      // Validar estrutura
       expect(searchEvent.stage).toBe('search');
       expect(searchEvent.status).toBe('success');
       expect(searchEvent.data.precedents).toBeInstanceOf(Array);
-      expect(searchEvent.data.totalFound).toBe(2);
+      expect(searchEvent.data.totalFound).toBe(10);
       expect(searchEvent.data.averageSimilarityScore).toBeDefined();
 
-      // Validar estrutura de precedente
       const precedent = searchEvent.data.precedents[0];
       expect(precedent).toHaveProperty('id');
-      expect(precedent).toHaveProperty('titulo');
-      expect(precedent).toHaveProperty('ementa');
-      expect(precedent).toHaveProperty('tribunal');
-      expect(precedent).toHaveProperty('numero');
-      expect(precedent).toHaveProperty('similarityScore');
-      expect(precedent).toHaveProperty('synthesisStatus');
+      expect(precedent).toHaveProperty('numero_registro');
+      expect(precedent).toHaveProperty('tese');
+      expect(precedent).toHaveProperty('questao');
+      expect(precedent).toHaveProperty('percentual_similaridade');
 
       done();
     });
 
-    it('should validate synthesis event has classification', (done) => {
+    it('should validate synthesis event structure', (done) => {
       const synthesisEvent = makeSynthesisEvent(1);
 
       expect(synthesisEvent.stage).toBe('synthesis');
       expect(synthesisEvent.status).toBe('success');
       expect(synthesisEvent.data.precedentId).toBe(1);
-      expect(synthesisEvent.data.synthesis).toBeDefined();
+      expect(synthesisEvent.data.percentual_similaridade).toBeDefined();
+      expect(synthesisEvent.data.classificacao).toBeDefined();
+      expect(synthesisEvent.data.sintese_explicativa).toBeDefined();
 
-      // Validar classification
-      expect(synthesisEvent.data.classification).toHaveProperty('relevance');
-      expect(synthesisEvent.data.classification).toHaveProperty('applicability');
-      expect(synthesisEvent.data.classification).toHaveProperty('confidence');
-      expect(synthesisEvent.data.classification).toHaveProperty('reason');
-
-      expect(['high', 'medium', 'low']).toContain(
-        synthesisEvent.data.classification.relevance,
-      );
-      expect(typeof synthesisEvent.data.classification.applicability).toBe(
-        'boolean',
-      );
-      expect(typeof synthesisEvent.data.classification.confidence).toBe(
-        'number',
-      );
+      expect(typeof synthesisEvent.data.percentual_similaridade).toBe('number');
+      expect(typeof synthesisEvent.data.classificacao).toBe('number');
+      expect(typeof synthesisEvent.data.sintese_explicativa).toBe('string');
 
       done();
     });
