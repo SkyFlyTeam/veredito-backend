@@ -2,10 +2,23 @@ import { PeticaoStreamController } from '../../src/peticao/controller/peticao-st
 import {
   SearchEvent,
   SynthesisEvent,
+  ResumoEvent,
   CompleteEvent,
   ErrorEvent,
 } from '../../src/peticao/dto/pipeline-event.dto';
+import { PrecedenteSugeridoEntity } from '../../src/precedents/entity/precedente_sugerido.entity';
 import { of, throwError } from 'rxjs';
+
+const makePrecedenteSugerido = (id: number, peticaoId: number): PrecedenteSugeridoEntity => ({
+  id,
+  percentual_similaridade: 0.92,
+  classificacao: 4,
+  sintese_explicativa: 'Síntese do precedente com análise completa da jurisprudência aplicável',
+  precedenteId: id,
+  peticaoId,
+  precedente: null,
+  peticao: null,
+} as PrecedenteSugeridoEntity);
 
 const makeSearchEvent = (): SearchEvent => ({
   stage: 'search',
@@ -13,37 +26,27 @@ const makeSearchEvent = (): SearchEvent => ({
   timestamp: new Date(),
   data: {
     precedents: [
-      {
-        id: 1,
-        numero_registro: '0000001-00.0000.0.00000',
-        tese: 'Tese do precedente 1',
-        questao: 'Questão jurídica do precedente 1',
-        percentual_similaridade: 0.92,
-        tribunal: 'TJ-SP',
-      },
-      {
-        id: 2,
-        numero_registro: '0000002-00.0000.0.00000',
-        tese: 'Tese do precedente 2',
-        questao: 'Questão jurídica do precedente 2',
-        percentual_similaridade: 0.88,
-        tribunal: 'TJ-RJ',
-      },
+      makePrecedenteSugerido(1, 100),
+      makePrecedenteSugerido(2, 100),
     ],
     totalFound: 10,
     averageSimilarityScore: 0.9,
   },
 });
 
-const makeSynthesisEvent = (precedentId: number): SynthesisEvent => ({
+const makeSynthesisEvent = (precedentId: number, peticaoId: number): SynthesisEvent => ({
   stage: 'synthesis',
   status: 'success',
   timestamp: new Date(),
+  data: makePrecedenteSugerido(precedentId, peticaoId),
+});
+
+const makeResumoEvent = (): ResumoEvent => ({
+  stage: 'resumo',
+  status: 'success',
+  timestamp: new Date(),
   data: {
-    precedentId,
-    percentual_similaridade: 0.95,
-    classificacao: 1,
-    sintese_explicativa: 'Síntese do precedente com análise completa da jurisprudência aplicável',
+    resumo: 'Resumo da análise completa da petição',
   },
 });
 
@@ -129,8 +132,8 @@ describe('PeticaoStreamController', () => {
     it('should emit multiple synthesis events in sequence', (done) => {
       const events = [
         makeSearchEvent(),
-        makeSynthesisEvent(1),
-        makeSynthesisEvent(2),
+        makeSynthesisEvent(1, 100),
+        makeSynthesisEvent(2, 100),
         makeCompleteEvent(),
       ];
 
@@ -189,23 +192,27 @@ describe('PeticaoStreamController', () => {
 
       const precedent = searchEvent.data.precedents[0];
       expect(precedent).toHaveProperty('id');
-      expect(precedent).toHaveProperty('numero_registro');
-      expect(precedent).toHaveProperty('tese');
-      expect(precedent).toHaveProperty('questao');
       expect(precedent).toHaveProperty('percentual_similaridade');
+      expect(precedent).toHaveProperty('classificacao');
+      expect(precedent).toHaveProperty('sintese_explicativa');
+      expect(precedent).toHaveProperty('precedenteId');
+      expect(precedent).toHaveProperty('peticaoId');
 
       done();
     });
 
     it('should validate synthesis event structure', (done) => {
-      const synthesisEvent = makeSynthesisEvent(1);
+      const synthesisEvent = makeSynthesisEvent(1, 100);
 
       expect(synthesisEvent.stage).toBe('synthesis');
       expect(synthesisEvent.status).toBe('success');
-      expect(synthesisEvent.data.precedentId).toBe(1);
+      expect(synthesisEvent.data).toBeDefined();
+      expect(synthesisEvent.data.id).toBe(1);
       expect(synthesisEvent.data.percentual_similaridade).toBeDefined();
       expect(synthesisEvent.data.classificacao).toBeDefined();
       expect(synthesisEvent.data.sintese_explicativa).toBeDefined();
+      expect(synthesisEvent.data.precedenteId).toBe(1);
+      expect(synthesisEvent.data.peticaoId).toBe(100);
 
       expect(typeof synthesisEvent.data.percentual_similaridade).toBe('number');
       expect(typeof synthesisEvent.data.classificacao).toBe('number');
@@ -247,7 +254,8 @@ describe('PeticaoStreamController', () => {
     it('all events should have timestamp', (done) => {
       const events = [
         makeSearchEvent(),
-        makeSynthesisEvent(1),
+        makeSynthesisEvent(1, 100),
+        makeResumoEvent(),
         makeCompleteEvent(),
         makeErrorEvent(),
       ];
@@ -262,7 +270,8 @@ describe('PeticaoStreamController', () => {
     it('all events should have stage and status', (done) => {
       const events = [
         makeSearchEvent(),
-        makeSynthesisEvent(1),
+        makeSynthesisEvent(1, 100),
+        makeResumoEvent(),
         makeCompleteEvent(),
         makeErrorEvent(),
       ];
