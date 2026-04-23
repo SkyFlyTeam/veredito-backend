@@ -1,3 +1,4 @@
+import { PrecedenteSugeridoEntity } from '../../precedents/entity/precedente_sugerido.entity';
 
 export interface PipelineEvent {
   stage: 'search' | 'synthesis' | 'resumo' | 'complete' | 'error';
@@ -11,33 +12,17 @@ export interface PipelineEvent {
 export interface SearchEvent extends PipelineEvent {
   stage: 'search';
   data: {
-    precedents: PrecedentData[];
+    precedents: PrecedenteSugeridoEntity[];
     totalFound: number;
     averageSimilarityScore: number;
   };
 }
 
 
-export interface PrecedentData {
-  id: number;
-  numero_registro: string;
-  tese: string;
-  questao: string;
-  percentual_similaridade: number;
-  tribunal?: string;
-}
-
-
 export interface SynthesisEvent extends PipelineEvent {
   stage: 'synthesis';
-  data: {
-    precedentId: number;
-    percentual_similaridade: number;
-    classificacao: number;
-    sintese_explicativa: string;
-  };
+  data: PrecedenteSugeridoEntity;
 }
-
 
 export interface ResumoEvent extends PipelineEvent {
   stage: 'resumo';
