@@ -33,4 +33,15 @@ export class EmbeddingsService {
       throw error;
     }
   }
+
+  async generateEmbeddingWithMetrics(text: string): Promise<{ embedding: number[]; tokens: number }> {
+    const response = await this.openai.embeddings.create({
+      model: 'text-embedding-3-small',
+      input: text,
+    });
+    return {
+      embedding: response.data[0].embedding,
+      tokens: response.usage.total_tokens,
+    };
+  }
 }
