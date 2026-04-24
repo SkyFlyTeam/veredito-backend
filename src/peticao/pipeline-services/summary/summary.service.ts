@@ -6,6 +6,13 @@ export interface PeticaoSummary {
   solicitacaoPedido: string;
 }
 
+export interface PeticaoSummaryWithMetrics extends PeticaoSummary {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  elapsedMs: number;
+}
+
 @Injectable()
 export class SummaryService {
   private readonly logger = new Logger(SummaryService.name);
@@ -51,6 +58,37 @@ export class SummaryService {
 
     const content = response.choices[0]?.message?.content ?? '';
     return this.parseResponse(content);
+  }
+
+  async summarizeWithMetrics(rawText: string): Promise<PeticaoSummaryWithMetrics> {
+    const t0 = Date.now();
+    const prompt = this.buildPrompt(rawText);
+
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content:
+            'Você é um assistente jurídico especializado em análise de petições. ' +
+            'Responda sempre em português brasileiro, de forma objetiva e técnica. ' +
+            'Respeite rigorosamente os limites de linhas indicados no prompt.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.2,
+    });
+
+    const content = response.choices[0]?.message?.content ?? '';
+    const parsed = this.parseResponse(content);
+
+    return {
+      ...parsed,
+      promptTokens: response.usage?.prompt_tokens ?? 0,
+      completionTokens: response.usage?.completion_tokens ?? 0,
+      totalTokens: response.usage?.total_tokens ?? 0,
+      elapsedMs: Date.now() - t0,
+    };
   }
 
   private buildPrompt(rawText: string): string {
