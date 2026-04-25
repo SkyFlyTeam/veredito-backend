@@ -8,7 +8,6 @@ export interface PipelineEvent {
   data: any;
 }
 
-
 export interface SearchEvent extends PipelineEvent {
   stage: 'search';
   data: {
@@ -17,7 +16,6 @@ export interface SearchEvent extends PipelineEvent {
     averageSimilarityScore: number;
   };
 }
-
 
 export interface SynthesisEvent extends PipelineEvent {
   stage: 'synthesis';

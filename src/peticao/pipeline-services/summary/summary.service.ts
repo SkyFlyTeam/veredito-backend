@@ -60,7 +60,9 @@ export class SummaryService {
     return this.parseResponse(content);
   }
 
-  async summarizeWithMetrics(rawText: string): Promise<PeticaoSummaryWithMetrics> {
+  async summarizeWithMetrics(
+    rawText: string,
+  ): Promise<PeticaoSummaryWithMetrics> {
     const t0 = Date.now();
     const prompt = this.buildPrompt(rawText);
 
@@ -104,7 +106,9 @@ export class SummaryService {
     );
   }
 
-  private parseResponse(content: string): Pick<PeticaoSummary, 'teseJuridica' | 'solicitacaoPedido'> {
+  private parseResponse(
+    content: string,
+  ): Pick<PeticaoSummary, 'teseJuridica' | 'solicitacaoPedido'> {
     const teseMatch = content.match(
       /TESE JUR[IÍ]DICA:\s*([\s\S]*?)(?=SOLICITA[ÇC][ÃA]O\/PEDIDO:|$)/i,
     );
@@ -125,10 +129,6 @@ export class SummaryService {
   }
 
   private truncateLines(text: string, maxLines: number): string {
-    return text
-      .split('\n')
-      .slice(0, maxLines)
-      .join('\n')
-      .trim();
+    return text.split('\n').slice(0, maxLines).join('\n').trim();
   }
 }

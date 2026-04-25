@@ -34,7 +34,9 @@ export class EmbeddingsService {
     }
   }
 
-  async generateEmbeddingWithMetrics(text: string): Promise<{ embedding: number[]; tokens: number }> {
+  async generateEmbeddingWithMetrics(
+    text: string,
+  ): Promise<{ embedding: number[]; tokens: number }> {
     const response = await this.openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,

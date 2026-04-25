@@ -4,11 +4,11 @@ import { CommandRunnerModule } from 'nest-commander';
 import { PeticaoEntity } from './entity/peticao.entity';
 import { PeticaoService } from './service/peticao.service';
 import { PeticaoController } from './controller/peticao.controller';
-import { PeticaoStreamController } from './controller/peticao-stream.controller';
 import { WordProcessingService } from './pipeline-services/word_processing/word-processing.service';
 import { TextProcessingService } from './pipeline-services/word_processing/text-processing.service';
 import { PipelineOrchestrator } from './pipeline-services/pipeline_orchestror';
 import { SummaryService } from './pipeline-services/summary/summary.service';
+import { ResumeService } from './pipeline-services/resume/resume.service';
 import { RunPipelineCommand } from './commands/run-pipeline.command';
 import { BenchmarkPipelineCommand } from './commands/benchmark-pipeline.command';
 import { SemanticSearchModule } from './semantic-search/semantic-search.module';
@@ -26,13 +26,14 @@ import { SynthesisModule } from '../synthesis/synthesis.module';
     PrecedenteModule,
     SynthesisModule,
   ],
-  controllers: [PeticaoController, PeticaoStreamController],
+  controllers: [PeticaoController],
   providers: [
     PeticaoService,
     WordProcessingService,
     TextProcessingService,
     PipelineOrchestrator,
     SummaryService,
+    ResumeService,
     RunPipelineCommand,
     BenchmarkPipelineCommand,
   ],
@@ -43,4 +44,4 @@ import { SynthesisModule } from '../synthesis/synthesis.module';
     PipelineOrchestrator,
   ],
 })
-export class PeticaoModule { }
+export class PeticaoModule {}
