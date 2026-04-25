@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Controller,
@@ -10,6 +13,7 @@ import {
   UseGuards,
   UseInterceptors,
   Req,
+  Sse,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,6 +23,8 @@ import {
   ApiConsumes,
   ApiBody,
 } from '@nestjs/swagger';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { PeticaoService } from '../service/peticao.service';
 import { PeticaoResponseDTO } from '../dto/peticao-response.dto';
 import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
@@ -27,8 +33,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
-import { PipelineOrchestrator, PipelineResult } from '../pipeline-services/pipeline_orchestror';
+import { PipelineOrchestrator } from '../pipeline-services/pipeline_orchestror';
 import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
+import { PipelineEvent } from '../dto/pipeline-event.dto';
 
 @ApiTags('Petições')
 @ApiBearerAuth('access-token')
@@ -39,7 +46,7 @@ export class PeticaoController {
     private readonly peticaoService: PeticaoService,
     private readonly orchestrator: PipelineOrchestrator,
     private readonly precedenteSugeridoService: PrecedenteSugeridoService,
-  ) { }
+  ) {}
 
   @Post('upload')
   @HttpCode(201)
@@ -84,7 +91,10 @@ export class PeticaoController {
     description: 'Petição criada com sucesso',
     type: PeticaoResponseDTO,
   })
-  async uploadFile(@UploadedFile() file: Express.Multer.File, @Req() req: any): Promise<PeticaoResponseDTO> {
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ): Promise<PeticaoResponseDTO> {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
@@ -119,21 +129,21 @@ export class PeticaoController {
     return this.peticaoService.findOne(id);
   }
 
-  @Post(':id/analisar')
+  @Get(':id/stream')
+  @Sse()
   @HttpCode(200)
-  @ApiOperation({ summary: 'Executar a pipeline completa de análise para uma petição' })
-  @ApiResponse({
-    status: 200,
-    description: 'Análise concluída com sucesso',
-  })
-  async analisar(@Param('id', ParseIntPipe) id: number): Promise<PipelineResult> {
-    const pipelineResult = await this.orchestrator.run(id);
-
-    const detailedPrecedents = await this.precedenteSugeridoService.findByPeticao(id);
-
-    return {
-      ...pipelineResult,
-      precedentes: detailedPrecedents,
-    };
+  streamPipeline(
+    @Param('id', ParseIntPipe) id: number,
+  ): Observable<MessageEvent> {
+    return this.orchestrator.run(id).pipe(
+      map(
+        (event: PipelineEvent) =>
+          ({
+            type: event.stage,
+            data: JSON.stringify(event),
+            retry: 5000,
+          }) as unknown as MessageEvent,
+      ),
+    );
   }
 }
