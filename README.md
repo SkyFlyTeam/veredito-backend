@@ -86,3 +86,48 @@ docker compose run --rm app npm run start:cli -- embeddings:precedentes
 ```
 
 Comando para gerar embeddings de todos os precedentes
+
+
+## Popular banco com dump
+
+1. Excluir o volume 
+
+```bash
+docker compose down -v
+```
+
+2. Subir apenas o container do postgres 
+
+```bash
+docker compose up postgres -d
+```
+
+3. Copiar o dump para o container
+
+```bash
+docker cp <caminho-do-dump> nest_postgres:/
+```
+
+4. Entrar no container e executar o comando para popular o banco
+
+```bash
+docker exec -it nest_postgres bash
+psql -U nestuser -d nestdb -f <dump_file.sql>
+```
+
+5. Rode as migrations novamente
+
+
+## Gerar dump do banco
+
+1. Entrar no container do pg
+
+```bash
+docker exec -it nest_postgres bash
+```
+
+2. Executar o seguinte comando adequando a data:
+
+```bash
+pg_dump -U usuario -d nome_do_banco > dump_DD_MM_YYYY.sql
+```
