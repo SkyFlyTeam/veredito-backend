@@ -27,11 +27,17 @@ export class SemanticSearchService {
           p.status_id,
           p.tribunal_id,
           p.especie_id,
+          sp.nome as status_nome,
+          tp.nome as tribunal_nome,
+          ep.nome as especie_nome,
           1 - LEAST(
             COALESCE(p.tese_vetor <=> $1::vector, 1),
             COALESCE(p.questao_vetor <=> $1::vector, 1)
           ) AS score
         FROM precedente p
+        LEFT JOIN status_precedente sp ON p.status_id = sp.id
+        LEFT JOIN tribunal_precedente tp ON p.tribunal_id = tp.id
+        LEFT JOIN especie_precedente ep ON p.especie_id = ep.id
         WHERE p.tese_vetor IS NOT NULL 
            OR p.questao_vetor IS NOT NULL
         ORDER BY score DESC
