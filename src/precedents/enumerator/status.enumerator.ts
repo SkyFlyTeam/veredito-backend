@@ -9,6 +9,9 @@ export enum StatusPrecedenteEnumerator {
   REVISAO = 'revisão',
   SEM_PROCESSO_VINCULADO = 'sem processo vinculado',
   ACORDAO_PUBLICADO = 'acórdão publicado',
+  CONTROVERSIA_VINCULADA = 'controvérsia vinculada',
+  AFETADO = 'afetado',
+  APROVADO = 'aprovado',
   CANCELADO = 'cancelado',
   DESCONHECIDO = 'desconhecido',
 }
