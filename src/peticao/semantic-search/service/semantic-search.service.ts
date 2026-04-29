@@ -30,6 +30,9 @@ export class SemanticSearchService {
           sp.nome as status_nome,
           tp.nome as tribunal_nome,
           ep.nome as especie_nome,
+          tp.sigla as tribunal_sigla,
+          ep.nome as especie_nome,
+          ep.sigla as especie_sigla,
           1 - LEAST(
             COALESCE(p.tese_vetor <=> $1::vector, 1),
             COALESCE(p.questao_vetor <=> $1::vector, 1)
