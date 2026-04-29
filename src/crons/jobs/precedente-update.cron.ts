@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
@@ -40,6 +40,55 @@ export class PrecedenteUpdateService {
     return this.executeJob();
   }
 
+  async updatePrecedent5090(tribunalMap, especieMap, statusList) {
+    const response = await axios.post(
+      'https://pangeabnp.pdpj.jus.br/api/v1/precedentes',
+      {
+        filtro: {
+          buscaGeral: '',
+          nr: '5090',
+          cancelados: false,
+          ordenacao: 'Text',
+          orgaos: ['STF'],
+          pagina: 1,
+          quaisquerPalavras: '',
+          semPalavras: '',
+          tipos: ['ADI'],
+          todasPalavras: '',
+          trechoExato: '',
+        },
+      },
+      { timeout: 10000 },
+    );
+
+    const data = response.data.resultados[0];
+
+    const tribunal = tribunalMap.get(data.orgao);
+    const especie = especieMap.get(data.tipo);
+
+    const situacao = normalize(data.situacao || '');
+
+    let resolvedStatus = statusList.find((s) =>
+      situacao?.includes(normalize(s.nome)),
+    );
+
+    if (!resolvedStatus) {
+      resolvedStatus = statusList.find((s) => s.nome === 'desconhecido');
+    }
+
+    const entity = this.precedenteRepo.create({
+      numero_registro: data.id,
+      ultima_atualizacao: new Date(),
+      tese: data?.textoEmenta || null,
+      questao: data?.questao || null,
+      tribunal: tribunal,
+      especie: especie,
+      status: resolvedStatus,
+    });
+
+    return entity;
+  }
+
   async executeJob() {
     if (this.isRunning) {
       this.logger.warn('Job already running, skipping...');
@@ -78,6 +127,10 @@ export class PrecedenteUpdateService {
       let totalPages = 1;
 
       const precedentesToSave: PrecedenteEntity[] = [];
+
+      precedentesToSave.push(
+        await this.updatePrecedent5090(tribunalMap, especieMap, statusList),
+      );
 
       let created = 0;
       let updated = 0;
@@ -142,7 +195,7 @@ export class PrecedenteUpdateService {
           if (entity) {
             // 🔁 UPDATE
             entity.ultima_atualizacao = new Date();
-            entity.tese = p?.tese || null;
+            entity.tese = p?.tese || p?.textoEmenda || null;
             entity.questao = p?.questao || null;
             entity.tribunal = tribunal;
             entity.especie = especie;
@@ -154,7 +207,7 @@ export class PrecedenteUpdateService {
             entity = this.precedenteRepo.create({
               numero_registro: p.id,
               ultima_atualizacao: new Date(),
-              tese: p?.tese || null,
+              tese: p?.tese || p?.textoEmenda || null,
               questao: p?.questao || null,
               tribunal,
               especie,
