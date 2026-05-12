@@ -15,6 +15,7 @@ import {
   Req,
   Sse,
 } from '@nestjs/common';
+import { Roles } from '../../account/auth/decorators/roles.decorator';
 import {
   ApiTags,
   ApiOperation,
@@ -46,9 +47,10 @@ export class PeticaoController {
     private readonly peticaoService: PeticaoService,
     private readonly orchestrator: PipelineOrchestrator,
     private readonly precedenteSugeridoService: PrecedenteSugeridoService,
-  ) {}
+  ) { }
 
   @Post('upload')
+  @Roles('advogado', 'superuser')
   @HttpCode(201)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -108,6 +110,7 @@ export class PeticaoController {
   }
 
   @Get()
+  @Roles('advogado', 'juiz', 'superuser')
   @ApiOperation({ summary: 'Listar todas as petições' })
   @ApiResponse({
     status: 200,
@@ -119,6 +122,7 @@ export class PeticaoController {
   }
 
   @Get(':id')
+  @Roles('advogado', 'juiz', 'superuser')
   @ApiOperation({ summary: 'Obter uma petição pelo ID' })
   @ApiResponse({
     status: 200,
@@ -130,6 +134,7 @@ export class PeticaoController {
   }
 
   @Get(':id/stream')
+  @Roles('advogado', 'superuser')
   @Sse()
   @HttpCode(200)
   streamPipeline(

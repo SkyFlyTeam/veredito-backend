@@ -34,13 +34,13 @@ export class PrecedenteController {
   }
 
   @Get(':id')
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.precedenteService.findOne(id);
   }
 
   @Get()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.precedenteService.findAll();
   }
