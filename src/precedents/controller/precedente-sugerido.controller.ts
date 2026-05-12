@@ -36,19 +36,19 @@ export class PrecedenteSugeridoController {
   }
 
   @Get()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.precedenteSugeridoService.findAll();
   }
 
   @Get(':id')
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.precedenteSugeridoService.findOne(id);
   }
 
   @Put()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   update(@Body() dto: UpdatePrecedenteSugeridoDto) {
     return this.precedenteSugeridoService.update(dto.id, dto);
   }

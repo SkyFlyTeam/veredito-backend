@@ -35,13 +35,13 @@ export class StatusPrecedenteController {
   }
 
   @Get()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.statusPrecedenteService.findAll();
   }
 
   @Get(':id')
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.statusPrecedenteService.findOne(id);
   }

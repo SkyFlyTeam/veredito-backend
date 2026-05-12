@@ -35,13 +35,13 @@ export class TribunalPrecedenteController {
   }
 
   @Get()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.tribunalPrecedenteService.findAll();
   }
 
   @Get(':id')
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.tribunalPrecedenteService.findOne(id);
   }
