@@ -35,13 +35,13 @@ export class EspeciePrecedenteController {
   }
 
   @Get()
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.especiePrecedenteService.findAll();
   }
 
   @Get(':id')
-  @Roles('superuser')
+  @Roles('advogado', 'juiz', 'superuser')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.especiePrecedenteService.findOne(id);
   }
