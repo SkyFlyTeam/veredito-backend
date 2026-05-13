@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -14,9 +18,7 @@ export const ALLOWED_MIMETYPES = [
   'text/plain', // TXT
 ];
 
-
 export const ALLOWED_EXTENSIONS = ['pdf', 'docx', 'txt'];
-
 
 @Injectable()
 export class WordProcessingService {
@@ -104,7 +106,16 @@ export class WordProcessingService {
     const result = await parser.getText();
 
     // Remove page number lines that match the pattern: "-- 1 of 3 --" added automatically by the pdf parser
-    const cleanedText = result.text.replace(/^.*--\s*\d+\s+of\s+\d+\s*--.*$\n?/gim, '');
+    const cleanedText = result.text.replace(
+      /^.*--\s*\d+\s+of\s+\d+\s*--.*$\n?/gim,
+      '',
+    );
+
+    if (!cleanedText || cleanedText.length < 50) {
+      throw new Error(
+        'PDF é uma imagem escaneada ou está vazio. Por favor envie outro PDF com texto legível.',
+      );
+    }
 
     return cleanedText;
   }
