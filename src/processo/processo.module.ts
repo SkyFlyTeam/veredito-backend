@@ -17,13 +17,7 @@ import { TipoPecaSeed } from './seed/tipo-peca.seed';
     ]),
   ],
   controllers: [ProcessoController],
-  providers: [
-    TextSearchPartsService,
-    WordProcessingService,
-    TipoPecaSeed,
-  ],
-  exports: [
-    TextSearchPartsService,
-  ],
+  providers: [TextSearchPartsService, WordProcessingService, TipoPecaSeed],
+  exports: [TextSearchPartsService],
 })
 export class ProcessoModule {}
