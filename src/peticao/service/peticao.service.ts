@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -15,7 +16,7 @@ export class PeticaoService {
     @InjectRepository(PeticaoEntity)
     private readonly peticaoRepository: Repository<PeticaoEntity>,
     private readonly textProcessingService: TextProcessingService,
-  ) { }
+  ) {}
 
   async findAll(): Promise<PeticaoResponseDTO[]> {
     const peticoes = await this.peticaoRepository.find();
@@ -32,7 +33,10 @@ export class PeticaoService {
     return this.mapToResponseDTO(peticao);
   }
 
-  async create(filePath: string, usuarioId: number): Promise<PeticaoResponseDTO> {
+  async create(
+    filePath: string,
+    usuarioId: number,
+  ): Promise<PeticaoResponseDTO> {
     const peticao = this.peticaoRepository.create({
       caminhoArquivo: filePath,
       usuarioId,
@@ -53,7 +57,9 @@ export class PeticaoService {
     const deleteResult = await this.peticaoRepository.delete(idsToDelete);
 
     const fileDeletionResults = await Promise.allSettled(
-      peticoes.map((peticao) => this.deleteUploadedFile(peticao.caminhoArquivo)),
+      peticoes.map((peticao) =>
+        this.deleteUploadedFile(peticao.caminhoArquivo),
+      ),
     );
 
     const fileDeleteFailures = fileDeletionResults.filter(
