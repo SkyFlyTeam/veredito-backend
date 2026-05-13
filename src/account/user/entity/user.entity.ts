@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { AccessLevelEntity } from './access-level.entity';
 import { PeticaoEntity } from '../../../peticao/entity/peticao.entity';
+import { CasoJuridicoEntity } from '../../../caso_juridico/entity/caso_juridico.entity';
 
 @Entity('users')
 export class UserEntity {
@@ -45,4 +46,7 @@ export class UserEntity {
 
   @OneToMany(() => PeticaoEntity, (peticao) => peticao.user)
   peticoes: PeticaoEntity[];
+
+  @OneToMany(() => CasoJuridicoEntity, (caso) => caso.usuario)
+  casosJuridicos: CasoJuridicoEntity[];
 }

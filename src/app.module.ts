@@ -10,6 +10,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { JobsModule } from './crons/jobcron.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { SynthesisModule } from './synthesis/synthesis.module';
+import { CasoJuridicoModule } from './caso_juridico/caso_juridico.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SynthesisModule } from './synthesis/synthesis.module';
     JobsModule,
     EmbeddingsModule,
     SynthesisModule,
+    CasoJuridicoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
