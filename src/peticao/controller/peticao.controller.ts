@@ -50,7 +50,7 @@ export class PeticaoController {
   ) { }
 
   @Post('upload')
-  @Roles('advogado', 'superuser')
+  @Roles('juiz', 'superuser')
   @HttpCode(201)
   @UseInterceptors(
     FileInterceptor('file', {
@@ -134,7 +134,7 @@ export class PeticaoController {
   }
 
   @Get(':id/stream')
-  @Roles('advogado', 'superuser')
+  @Roles('juiz', 'superuser')
   @Sse()
   @HttpCode(200)
   streamPipeline(
