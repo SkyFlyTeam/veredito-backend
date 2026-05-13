@@ -11,6 +11,7 @@ import { JobsModule } from './crons/jobcron.module';
 import { EmbeddingsModule } from './embeddings/embeddings.module';
 import { SynthesisModule } from './synthesis/synthesis.module';
 import { CasoJuridicoModule } from './caso_juridico/caso_juridico.module';
+import { ProcessoModule } from './processo/processo.module';
 
 @Module({
   imports: [
@@ -34,8 +35,9 @@ import { CasoJuridicoModule } from './caso_juridico/caso_juridico.module';
     EmbeddingsModule,
     SynthesisModule,
     CasoJuridicoModule,
+    ProcessoModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}
