@@ -8,6 +8,8 @@ import { PrecedenteSugeridoEntity } from './src/precedents/entity/precedente_sug
 import { EspeciePrecedenteEntity } from './src/precedents/entity/especie_precedente.entity';
 import { StatusPrecedenteEntity } from './src/precedents/entity/status_precedente.entity';
 import { TribunalPrecedenteEntity } from './src/precedents/entity/tribunal_precedente.entity';
+import { CasoJuridicoEntity } from './src/caso_juridico/entity/caso_juridico.entity';
+import { CasoPrecedenteSugeridoEntity } from './src/caso_juridico/entity/caso_precedente_sugerido.entity';
 
 export default new DataSource({
   type: 'postgres',
@@ -25,6 +27,8 @@ export default new DataSource({
     EspeciePrecedenteEntity,
     StatusPrecedenteEntity,
     TribunalPrecedenteEntity,
+    CasoJuridicoEntity,
+    CasoPrecedenteSugeridoEntity,
   ],
   migrations: ['src/migrations/*.ts'],
 });
