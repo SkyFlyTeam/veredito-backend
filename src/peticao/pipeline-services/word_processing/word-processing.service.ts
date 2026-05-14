@@ -111,12 +111,6 @@ export class WordProcessingService {
       '',
     );
 
-    if (!cleanedText || cleanedText.length < 50) {
-      throw new Error(
-        'PDF é uma imagem escaneada ou está vazio. Por favor envie outro PDF com texto legível.',
-      );
-    }
-
     return cleanedText;
   }
 
