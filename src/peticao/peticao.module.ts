@@ -10,6 +10,7 @@ import { PipelineOrchestrator } from './pipeline-services/pipeline_orchestror';
 import { SummaryService } from './pipeline-services/summary/summary.service';
 import { ResumeService } from './pipeline-services/resume/resume.service';
 import { RunPipelineCommand } from './commands/run-pipeline.command';
+import { RunPipelineBatchCommand } from './commands/run-pipeline-batch.command';
 import { BenchmarkPipelineCommand } from './commands/benchmark-pipeline.command';
 import { SemanticSearchModule } from './semantic-search/semantic-search.module';
 import { EmbeddingsModule } from '../embeddings/embeddings.module';
@@ -35,6 +36,7 @@ import { SynthesisModule } from '../synthesis/synthesis.module';
     SummaryService,
     ResumeService,
     RunPipelineCommand,
+    RunPipelineBatchCommand,
     BenchmarkPipelineCommand,
   ],
   exports: [
