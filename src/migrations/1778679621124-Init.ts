@@ -4,10 +4,6 @@ export class Init1778679621124 implements MigrationInterface {
     name = 'Init1778679621124'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX "public"."idx_tese"`);
-        await queryRunner.query(`DROP INDEX "public"."idx_questao"`);
-        await queryRunner.query(`DROP INDEX "public"."idx_peticao_tese"`);
-        await queryRunner.query(`DROP INDEX "public"."idx_peticao_questao"`);
         await queryRunner.query(`CREATE TABLE "tipo_peca" ("id" SERIAL NOT NULL, "nome" character varying(100) NOT NULL, CONSTRAINT "PK_c390dc09bb36e1ea7afdc5589e3" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "peca" ("id" SERIAL NOT NULL, "nome" character varying(100) NOT NULL, "pagina_inicial" integer NOT NULL, "tipo_peca_id" integer, "processo_juridico" integer, CONSTRAINT "PK_1f1bc7220f2d874ac369b134944" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "processo_juridico" ("id" SERIAL NOT NULL, "caminho_arquivo" character varying(250), "instancia" integer, "classe_processual" character varying(100), "area_direito" character varying(150), "created_at" TIMESTAMP NOT NULL DEFAULT now(), "usuario_id" integer, "peticao_id" integer, "tribunal_precedente" integer, CONSTRAINT "PK_e8d7e8b3588b53ea93de8167498" PRIMARY KEY ("id"))`);
@@ -53,10 +49,6 @@ export class Init1778679621124 implements MigrationInterface {
         await queryRunner.query(`DROP TABLE "processo_juridico"`);
         await queryRunner.query(`DROP TABLE "peca"`);
         await queryRunner.query(`DROP TABLE "tipo_peca"`);
-        await queryRunner.query(`CREATE INDEX "idx_peticao_questao" ON "peticao" ("questao_vetor") `);
-        await queryRunner.query(`CREATE INDEX "idx_peticao_tese" ON "peticao" ("tese_vetor") `);
-        await queryRunner.query(`CREATE INDEX "idx_questao" ON "precedente" ("questao_vetor") `);
-        await queryRunner.query(`CREATE INDEX "idx_tese" ON "precedente" ("tese_vetor") `);
     }
 
 }
