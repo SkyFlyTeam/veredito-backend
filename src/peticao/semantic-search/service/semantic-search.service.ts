@@ -5,6 +5,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import PrecedenteEntity from 'src/precedents/entity/precedente.entity';
 import { Repository } from 'typeorm';
+import { FiltrosDto } from 'src/peticao/dto/filtros.dto';
 
 @Injectable()
 export class SemanticSearchService {
@@ -13,12 +14,27 @@ export class SemanticSearchService {
     private readonly precedenteRepo: Repository<PrecedenteEntity>,
   ) {}
 
-  async searchSimilar(embedding: number[]) {
+  async searchSimilar(embedding: number[], filtros?: FiltrosDto) {
     const vector = JSON.stringify(embedding);
+    const params: unknown[] = [vector];
+    let paramIndex = 2;
+    let filterClauses = '';
+
+    if (filtros?.tribunais && filtros.tribunais.length > 0) {
+      filterClauses += ` AND p.tribunal_id = ANY($${paramIndex}::int[])`;
+      params.push(filtros.tribunais);
+      paramIndex++;
+    }
+
+    if (filtros?.especies && filtros.especies.length > 0) {
+      filterClauses += ` AND p.especie_id = ANY($${paramIndex}::int[])`;
+      params.push(filtros.especies);
+      paramIndex++;
+    }
 
     const result = await this.precedenteRepo.query(
       `
-        SELECT 
+        SELECT
           p.id,
           p.numero_registro,
           p.tese,
@@ -41,12 +57,12 @@ export class SemanticSearchService {
         LEFT JOIN status_precedente sp ON p.status_id = sp.id
         LEFT JOIN tribunal_precedente tp ON p.tribunal_id = tp.id
         LEFT JOIN especie_precedente ep ON p.especie_id = ep.id
-        WHERE p.tese_vetor IS NOT NULL 
-           OR p.questao_vetor IS NOT NULL
+        WHERE (p.tese_vetor IS NOT NULL
+           OR p.questao_vetor IS NOT NULL)${filterClauses}
         ORDER BY score DESC
         LIMIT 10;
       `,
-      [vector],
+      params,
     );
 
     const unique = new Map();
