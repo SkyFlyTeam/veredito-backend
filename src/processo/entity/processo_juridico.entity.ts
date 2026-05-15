@@ -17,7 +17,7 @@ export default class ProcessoJuridicoEntity implements EntityInterface {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 250, nullable: true })
+  @Column({ type: 'varchar', length: 250 })
   caminho_arquivo: string;
 
   @Column({ type: 'int', nullable: true })
