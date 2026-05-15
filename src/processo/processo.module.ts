@@ -6,6 +6,7 @@ import { WordProcessingService } from 'src/peticao/pipeline-services/word_proces
 import ProcessoJuridicoEntity from './entity/processo_juridico.entity';
 import TipoPecaEntity from './entity/tipo_peca.entity';
 import PecaEntity from './entity/peca.entity';
+import { TipoPecaSeed } from './seed/tipo-peca.seed';
 
 @Module({
   imports: [
@@ -17,8 +18,9 @@ import PecaEntity from './entity/peca.entity';
   ],
   controllers: [ProcessoController],
   providers: [
-    TextSearchPartsService, 
+    TextSearchPartsService,
     WordProcessingService,
+    TipoPecaSeed,
   ],
   exports: [
     TextSearchPartsService,
