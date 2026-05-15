@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   HttpCode,
@@ -37,6 +38,7 @@ import { UploadPeticaoDto } from '../dto/upload-peticao.dto';
 import { PipelineOrchestrator } from '../pipeline-services/pipeline_orchestror';
 import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
 import { PipelineEvent } from '../dto/pipeline-event.dto';
+import { AnalisePeticaoDto } from '../dto/analise-peticao.dto';
 
 @ApiTags('Petições')
 @ApiBearerAuth('access-token')
@@ -141,6 +143,26 @@ export class PeticaoController {
     @Param('id', ParseIntPipe) id: number,
   ): Observable<MessageEvent> {
     return this.orchestrator.run(id).pipe(
+      map(
+        (event: PipelineEvent) =>
+          ({
+            type: event.stage,
+            data: JSON.stringify(event),
+            retry: 5000,
+          }) as unknown as MessageEvent,
+      ),
+    );
+  }
+
+  @Post('analise')
+  @Roles('juiz', 'superuser')
+  @Sse()
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Analisar petição com filtros de tribunal e espécie' })
+  @ApiBody({ type: AnalisePeticaoDto })
+  @ApiResponse({ status: 200, description: 'Stream SSE da análise da petição' })
+  analisePeticao(@Body() dto: AnalisePeticaoDto): Observable<MessageEvent> {
+    return this.orchestrator.run(dto.peticao_id, dto.filtros).pipe(
       map(
         (event: PipelineEvent) =>
           ({
