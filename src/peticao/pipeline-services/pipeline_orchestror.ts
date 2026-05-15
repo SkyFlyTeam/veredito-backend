@@ -24,6 +24,7 @@ import {
   CompleteEvent,
   ErrorEvent,
 } from '../dto/pipeline-event.dto';
+import { FiltrosDto } from '../dto/filtros.dto';
 
 @Injectable()
 export class PipelineOrchestrator {
@@ -43,7 +44,7 @@ export class PipelineOrchestrator {
     private readonly peticaoRepository: Repository<PeticaoEntity>,
   ) {}
 
-  run(peticaoId: number): Observable<PipelineEvent> {
+  run(peticaoId: number, filtros?: FiltrosDto): Observable<PipelineEvent> {
     return new Observable<PipelineEvent>((observer) => {
       const pipelineStart = Date.now();
 
@@ -217,7 +218,7 @@ export class PipelineOrchestrator {
           const searchStart = Date.now();
 
           const suggestedPrecedents =
-            await this.semanticSearchService.searchSimilar(embedding);
+            await this.semanticSearchService.searchSimilar(embedding, filtros);
 
           this.logger.log(
             `[PASSO 7] Busca finalizada. Total encontrado: ${suggestedPrecedents.length}`,
