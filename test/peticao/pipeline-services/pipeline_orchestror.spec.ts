@@ -233,6 +233,7 @@ describe('PipelineOrchestrator', () => {
 
       expect(mockSemanticSearchService.searchSimilar).toHaveBeenCalledWith(
         mockEmbedding,
+        undefined,
       );
 
       expect(mockPrecedenteSugeridoService.createBulk).toHaveBeenNthCalledWith(
