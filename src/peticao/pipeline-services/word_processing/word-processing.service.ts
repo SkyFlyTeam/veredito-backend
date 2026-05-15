@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
@@ -6,10 +8,10 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as mammoth from 'mammoth';
+import { ExtractedPage } from 'src/processo/types/extracted-page.type';
 
 // pdf-parse v2 exports a PDFParse class instead of a plain function.
 // We use require() because the package is CJS-only and has no proper TS typings.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { PDFParse } = require('pdf-parse');
 
 export const ALLOWED_MIMETYPES = [
@@ -157,5 +159,168 @@ export class WordProcessingService {
     text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
     return text;
+  }
+
+  private async extractPagesFromBuffer(
+    originalname: string,
+    buffer: Buffer,
+  ): Promise<ExtractedPage[]> {
+    const extension = originalname.split('.').pop()?.toLowerCase();
+
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+      throw new BadRequestException(
+        `Tipo de arquivo não suportado. Formatos aceitos: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    switch (extension) {
+      case 'pdf':
+        return this.parsePdfPages(buffer);
+
+      case 'docx': {
+        const text = await this.parseDocx(buffer);
+        return [
+          {
+            pageNumber: 1,
+            text,
+          },
+        ];
+      }
+
+      case 'txt': {
+        const text = this.parseTxt(buffer);
+        return [
+          {
+            pageNumber: 1,
+            text,
+          },
+        ];
+      }
+
+      default:
+        throw new BadRequestException(
+          `Unsupported file type. Accepted formats: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        );
+    }
+  }
+
+  private async parsePdfPages(buffer: Buffer): Promise<ExtractedPage[]> {
+    if (!buffer || buffer.length === 0) {
+      throw new BadRequestException('Buffer do PDF está vazio ou inválido.');
+    }
+
+    const parser = new PDFParse({ data: buffer });
+    const result = await parser.getText();
+    const rawText = result.text;
+
+    if (!rawText || rawText.length < 50) {
+      throw new Error(
+        'PDF é uma imagem escaneada ou está vazio. Por favor envie outro PDF com texto legível.',
+      );
+    }
+
+    const pages = this.splitPdfParseTextIntoPages(rawText);
+
+    if (pages.length === 0) {
+      return [
+        {
+          pageNumber: 1,
+          text: rawText,
+        },
+      ];
+    }
+
+    return pages;
+  }
+
+  private splitPdfParseTextIntoPages(text: string): ExtractedPage[] {
+    const pageMarkerRegex = /--\s*(\d+)\s+of\s+(\d+)\s*--/gi;
+
+    const matches = Array.from(text.matchAll(pageMarkerRegex));
+
+    if (matches.length === 0) {
+      return [];
+    }
+
+    const pages: ExtractedPage[] = [];
+
+    for (let i = 0; i < matches.length; i++) {
+      const currentMatch = matches[i];
+      const nextMatch = matches[i + 1];
+
+      const pageNumber = Number(currentMatch[1]);
+
+      const startIndex = currentMatch.index + currentMatch[0].length;
+      const endIndex = nextMatch?.index ?? text.length;
+
+      const pageText = text.slice(startIndex, endIndex).trim();
+
+      pages.push({
+        pageNumber,
+        text: pageText,
+      });
+    }
+
+    return pages;
+  }
+
+  async extractPagesFromPath(filePath: string): Promise<ExtractedPage[]> {
+    if (!fs.existsSync(filePath)) {
+      throw new BadRequestException(`Arquivo não encontrado: ${filePath}`);
+    }
+
+    const buffer = fs.readFileSync(filePath);
+    const originalname = path.basename(filePath);
+    const extension = originalname.split('.').pop()?.toLowerCase();
+
+    if (!extension || !ALLOWED_EXTENSIONS.includes(extension)) {
+      throw new BadRequestException(
+        `Tipo de arquivo não suportado. Formatos aceitos: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      );
+    }
+
+    switch (extension) {
+      case 'pdf':
+        return this.parsePdfPages(buffer);
+
+      case 'docx': {
+        const text = await this.parseDocx(buffer);
+        return [
+          {
+            pageNumber: 1,
+            text,
+          },
+        ];
+      }
+
+      case 'txt': {
+        const text = this.parseTxt(buffer);
+        return [
+          {
+            pageNumber: 1,
+            text,
+          },
+        ];
+      }
+
+      default:
+        throw new BadRequestException(
+          `Unsupported file type. Accepted formats: ${ALLOWED_EXTENSIONS.join(', ')}`,
+        );
+    }
+  }
+
+  async extractPages(file: Express.Multer.File): Promise<ExtractedPage[]> {
+    if (file.buffer) {
+      return this.extractPagesFromBuffer(file.originalname, file.buffer);
+    }
+
+    if (file.path) {
+      return this.extractPagesFromPath(file.path);
+    }
+
+    throw new BadRequestException(
+      'Arquivo inválido: não foi encontrado buffer nem caminho do arquivo.',
+    );
   }
 }
