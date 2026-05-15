@@ -1,27 +1,9 @@
-import {
-  START_SIGNALS,
-  MIDDLE_SIGNALS,
-  END_SIGNALS,
-  PetitionSignal,
-} from '../config/petition-signals.config';
+import { Signal } from 'src/processo/types/signals.type';
+import { ChunkScore, SignalMatch } from '../../types/chunk.type';
 
-import { normalizeForMatch } from '../utils/normalize-text.utils';
+import { normalizeForMatch } from '../../utils/normalize-text.utils';
 
-export type SignalMatch = {
-  name: string;
-  weight: number;
-};
-
-export type ChunkScore = {
-  chunkIndex: number;
-  score: number;
-  startScore: number;
-  middleScore: number;
-  endScore: number;
-  matches: SignalMatch[];
-};
-
-function scoreSignalGroup(text: string, signals: PetitionSignal[]) {
+function scoreSignalGroup(text: string, signals: Signal[]) {
   const matches: SignalMatch[] = [];
   let score = 0;
 
@@ -41,12 +23,15 @@ function scoreSignalGroup(text: string, signals: PetitionSignal[]) {
 export function scorePetitionChunk(
   chunkIndex: number,
   text: string,
+  startSignals: Signal[],
+  middleSignals: Signal[],
+  endSignals: Signal[],
 ): ChunkScore {
   const normalized = normalizeForMatch(text);
 
-  const start = scoreSignalGroup(normalized, START_SIGNALS);
-  const middle = scoreSignalGroup(normalized, MIDDLE_SIGNALS);
-  const end = scoreSignalGroup(normalized, END_SIGNALS);
+  const start = scoreSignalGroup(normalized, startSignals);
+  const middle = scoreSignalGroup(normalized, middleSignals);
+  const end = scoreSignalGroup(normalized, endSignals);
 
   const score = start.score + middle.score + end.score;
 

@@ -54,9 +54,9 @@ describe('WordProcessingService', () => {
       });
 
       it('should throw BadRequestException when the file has no extension', async () => {
-        await expect(
-          service.extractText(makeFile('filename')),
-        ).rejects.toThrow(BadRequestException);
+        await expect(service.extractText(makeFile('filename'))).rejects.toThrow(
+          BadRequestException,
+        );
       });
 
       it('should include the allowed extensions list in the error message', async () => {
@@ -68,16 +68,18 @@ describe('WordProcessingService', () => {
 
     describe('PDF parsing', () => {
       it('should extract and return text from a PDF file', async () => {
+        const pdfText =
+          'conteúdo do pdf com texto suficiente para passar na validação mínima';
         const mockGetText = jest
           .fn<() => Promise<{ text: string }>>()
-          .mockResolvedValue({ text: 'conteúdo do pdf' });
+          .mockResolvedValue({ text: pdfText });
         PDFParseMock.mockImplementation(() => ({ getText: mockGetText }));
 
         const result = await service.extractText(
           makeFile('peticao.pdf', Buffer.from('bytes')),
         );
 
-        expect(result).toBe('conteúdo do pdf');
+        expect(result).toBe(pdfText);
       });
 
       it('should instantiate PDFParse with the file buffer', async () => {
@@ -85,7 +87,9 @@ describe('WordProcessingService', () => {
         PDFParseMock.mockImplementation(() => ({
           getText: jest
             .fn<() => Promise<{ text: string }>>()
-            .mockResolvedValue({ text: '' }),
+            .mockResolvedValue({
+              text: 'texto do pdf com tamanho suficiente para validar o parser',
+            }),
         }));
 
         await service.extractText(makeFile('peticao.pdf', buffer));
@@ -95,7 +99,7 @@ describe('WordProcessingService', () => {
 
       it('should remove page number lines like "-- 1 of 3 --" from the extracted text', async () => {
         const rawText =
-          'Introdução\n-- 1 of 3 --\nCapítulo um\n-- 2 of 3 --\nConclusão';
+          'Introdução do documento com texto suficiente\n-- 1 of 3 --\nCapítulo um com texto suficiente\n-- 2 of 3 --\nConclusão com texto suficiente';
         PDFParseMock.mockImplementation(() => ({
           getText: jest
             .fn<() => Promise<{ text: string }>>()
@@ -113,7 +117,8 @@ describe('WordProcessingService', () => {
       });
 
       it('should return text unchanged when there are no page number lines', async () => {
-        const rawText = 'Texto limpo sem numeração de página';
+        const rawText =
+          'Texto limpo sem numeração de página e com tamanho suficiente';
         PDFParseMock.mockImplementation(() => ({
           getText: jest
             .fn<() => Promise<{ text: string }>>()
@@ -155,7 +160,9 @@ describe('WordProcessingService', () => {
       it('should return the decoded UTF-8 content of a TXT file', async () => {
         const content = Buffer.from('Texto simples em UTF-8', 'utf-8');
 
-        const result = await service.extractText(makeFile('peticao.txt', content));
+        const result = await service.extractText(
+          makeFile('peticao.txt', content),
+        );
 
         expect(result).toBe('Texto simples em UTF-8');
       });
@@ -165,7 +172,9 @@ describe('WordProcessingService', () => {
         const bom = Buffer.from([0xef, 0xbb, 0xbf]);
         const content = Buffer.concat([bom, Buffer.from('Texto', 'utf-8')]);
 
-        const result = await service.extractText(makeFile('peticao.txt', content));
+        const result = await service.extractText(
+          makeFile('peticao.txt', content),
+        );
 
         expect(result.charCodeAt(0)).not.toBe(0xfeff);
         expect(result).toBe('Texto');
@@ -174,7 +183,9 @@ describe('WordProcessingService', () => {
       it('should normalize Windows-style CRLF (\\r\\n) to LF (\\n)', async () => {
         const content = Buffer.from('linha1\r\nlinha2\r\nlinha3', 'utf-8');
 
-        const result = await service.extractText(makeFile('peticao.txt', content));
+        const result = await service.extractText(
+          makeFile('peticao.txt', content),
+        );
 
         expect(result).toBe('linha1\nlinha2\nlinha3');
         expect(result).not.toContain('\r');
@@ -183,7 +194,9 @@ describe('WordProcessingService', () => {
       it('should normalize old Mac-style CR-only (\\r) line endings to LF (\\n)', async () => {
         const content = Buffer.from('linha1\rlinha2\rlinha3', 'utf-8');
 
-        const result = await service.extractText(makeFile('peticao.txt', content));
+        const result = await service.extractText(
+          makeFile('peticao.txt', content),
+        );
 
         expect(result).toBe('linha1\nlinha2\nlinha3');
         expect(result).not.toContain('\r');
@@ -198,6 +211,106 @@ describe('WordProcessingService', () => {
 
         expect(result).toBe('texto');
       });
+    });
+  });
+
+  describe('extractPages', () => {
+    it('should return one page for TXT files sent as a buffer', async () => {
+      const content = Buffer.from('Primeira linha\r\nSegunda linha', 'utf-8');
+
+      const result = await service.extractPages(
+        makeFile('processo.txt', content),
+      );
+
+      expect(result).toEqual([
+        {
+          pageNumber: 1,
+          text: 'Primeira linha\nSegunda linha',
+        },
+      ]);
+    });
+
+    it('should return one page for DOCX files sent as a buffer', async () => {
+      mammothMock.extractRawText.mockResolvedValue({
+        value: 'texto extraído do docx',
+      });
+      const buffer = Buffer.from('docx bytes');
+
+      const result = await service.extractPages(
+        makeFile('processo.docx', buffer),
+      );
+
+      expect(mammothMock.extractRawText).toHaveBeenCalledWith({ buffer });
+      expect(result).toEqual([
+        {
+          pageNumber: 1,
+          text: 'texto extraído do docx',
+        },
+      ]);
+    });
+
+    it('should split PDF text into pages using pdf-parse page markers', async () => {
+      const rawText = [
+        '-- 1 of 2 --',
+        'EXCELENTISSIMO SENHOR',
+        'DOS FATOS narrados na inicial',
+        '-- 2 of 2 --',
+        'DOS PEDIDOS',
+        'PEDE DEFERIMENTO',
+      ].join('\n');
+      PDFParseMock.mockImplementation(() => ({
+        getText: jest
+          .fn<() => Promise<{ text: string }>>()
+          .mockResolvedValue({ text: rawText }),
+      }));
+
+      const result = await service.extractPages(
+        makeFile('processo.pdf', Buffer.from('pdf bytes')),
+      );
+
+      expect(result).toEqual([
+        {
+          pageNumber: 1,
+          text: 'EXCELENTISSIMO SENHOR\nDOS FATOS narrados na inicial',
+        },
+        {
+          pageNumber: 2,
+          text: 'DOS PEDIDOS\nPEDE DEFERIMENTO',
+        },
+      ]);
+    });
+
+    it('should fall back to a single PDF page when there are no page markers', async () => {
+      const rawText =
+        'Texto extraído do PDF sem marcadores de página e com tamanho suficiente';
+      PDFParseMock.mockImplementation(() => ({
+        getText: jest
+          .fn<() => Promise<{ text: string }>>()
+          .mockResolvedValue({ text: rawText }),
+      }));
+
+      const result = await service.extractPages(
+        makeFile('processo.pdf', Buffer.from('pdf bytes')),
+      );
+
+      expect(result).toEqual([
+        {
+          pageNumber: 1,
+          text: rawText,
+        },
+      ]);
+    });
+
+    it('should throw BadRequestException when there is no buffer or path', async () => {
+      const file = {
+        ...makeFile('processo.txt'),
+        buffer: undefined,
+        path: '',
+      } as unknown as Express.Multer.File;
+
+      await expect(service.extractPages(file)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });
