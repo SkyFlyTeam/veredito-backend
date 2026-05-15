@@ -203,7 +203,6 @@ export class PipelineOrchestrator {
           // =====================================================
           this.logger.log(`[PASSO 6] Salvando vetores da petição ${peticaoId}`);
 
-          peticao.resumo = peticaoComResumo.resumo;
           peticao.teseVetor = embedding;
           peticao.questaoVetor = embedding;
           await this.peticaoRepository.save(peticao);
