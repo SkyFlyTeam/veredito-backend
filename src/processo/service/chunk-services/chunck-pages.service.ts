@@ -1,11 +1,5 @@
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-
-export type ProcessChunk = {
-  index: number;
-  pageStart?: number;
-  pageEnd?: number;
-  text: string;
-};
+import { ProcessChunk } from '../../types/chunk.type';
 
 export async function chunkProcessText(
   fullText: string,

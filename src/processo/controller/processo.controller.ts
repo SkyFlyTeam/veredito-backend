@@ -77,11 +77,11 @@ export class ProcessoController {
     description: 'Processo jurídico analizado e partes identificadas',
   })
   @Roles('superuser')
-  async searchParts(@UploadedFile() file: Express.Multer.File) {
+  async searchPeticao(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
-    return this.textSearchPartsService.searchParts(0, file);
+    return this.textSearchPartsService.searchPeticaoInicial(file);
   }
 }
