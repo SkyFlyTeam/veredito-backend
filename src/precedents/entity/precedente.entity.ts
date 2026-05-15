@@ -12,6 +12,7 @@ import { StatusPrecedenteEntity } from './status_precedente.entity';
 import { TribunalPrecedenteEntity } from './tribunal_precedente.entity';
 import { EspeciePrecedenteEntity } from './especie_precedente.entity';
 import EntityInterface from 'src/interfaces/entity.interface';
+import { CasoPrecedenteSugeridoEntity } from 'src/caso_juridico/entity/caso_precedente_sugerido.entity';
 
 @Entity('precedente')
 export default class PrecedenteEntity implements EntityInterface {
@@ -49,6 +50,13 @@ export default class PrecedenteEntity implements EntityInterface {
     (precedenteSugerido) => precedenteSugerido.precedente,
   )
   precedenteSugerido: PrecedenteSugeridoEntity[];
+
+  @Exclude()
+  @OneToMany(
+    () => CasoPrecedenteSugeridoEntity,
+    (casoPrecedenteSugerido) => casoPrecedenteSugerido.precedente,
+  )
+  casoPrecedenteSugerido: CasoPrecedenteSugeridoEntity[];
 
   @ManyToOne(() => StatusPrecedenteEntity, { nullable: true })
   @JoinColumn({ name: 'status_id' })
