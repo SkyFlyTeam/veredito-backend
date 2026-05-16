@@ -1,22 +1,18 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/account/auth/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/account/auth/guards/roles.guard';
+import { Controller, Get } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AccessLevelService } from '../service/access-level.service';
 import { AccessLevelEntity } from '../entity/access-level.entity';
 
 @Controller('access-level')
-@UseGuards(JwtAuthGuard, RolesGuard)
 @ApiTags('Access Levels')
-@ApiBearerAuth('access-token')
 export class AccessLevelController {
-  constructor(private readonly accessLevelService: AccessLevelService) {}
+  constructor(private readonly accessLevelService: AccessLevelService) { }
 
   @Get()
-  @ApiOperation({ summary: 'Listar todos os níveis de acesso (exceto superuser)' })
+  @ApiOperation({ summary: 'Listar todos os cargos (exceto superuser)' })
   @ApiResponse({
     status: 200,
-    description: 'Lista de níveis de acesso retornada com sucesso',
+    description: 'Lista de cargos retornada com sucesso',
     type: [AccessLevelEntity],
   })
   findAll(): Promise<AccessLevelEntity[]> {

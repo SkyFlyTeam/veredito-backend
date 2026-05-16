@@ -24,7 +24,7 @@ export class UserService implements ServiceInterface {
 
     @InjectRepository(AccessLevelEntity)
     private readonly accessLevelRepository: Repository<AccessLevelEntity>,
-  ) {}
+  ) { }
 
   private toSafeUser(user: UserEntity): SafeUser {
     const { password, ...safeUser } = user;
