@@ -17,7 +17,7 @@ import { UpdatePrecedenteSugeridoDto } from '../dto/update-precedente-sugerido.d
 import { Roles } from 'src/account/auth/decorators/roles.decorator';
 import { JwtAuthGuard } from 'src/account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/account/auth/guards/roles.guard';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @Controller('precedente-sugerido')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,6 +39,17 @@ export class PrecedenteSugeridoController {
   @Roles('advogado', 'juiz', 'superuser')
   findAll() {
     return this.precedenteSugeridoService.findAll();
+  }
+
+  @Get('por-peticao/:peticaoId')
+  @Roles('juiz', 'superuser')
+  @ApiOperation({ summary: 'Retorna precedentes sugeridos por petição' })
+  @ApiResponse({
+    status: 200,
+    description: 'Precedentes retornados com sucesso',
+  })
+  findByPeticao(@Param('peticaoId', ParseIntPipe) peticaoId: number) {
+    return this.precedenteSugeridoService.findByPeticao(peticaoId);
   }
 
   @Get(':id')

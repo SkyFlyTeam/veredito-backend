@@ -47,7 +47,7 @@ export class PeticaoController {
     private readonly peticaoService: PeticaoService,
     private readonly orchestrator: PipelineOrchestrator,
     private readonly precedenteSugeridoService: PrecedenteSugeridoService,
-  ) { }
+  ) {}
 
   @Post('upload')
   @Roles('juiz', 'superuser')
@@ -119,6 +119,19 @@ export class PeticaoController {
   })
   findAll(): Promise<PeticaoResponseDTO[]> {
     return this.peticaoService.findAll();
+  }
+
+  @Get('meus')
+  @Roles('juiz', 'superuser')
+  @ApiOperation({ summary: 'Listar petições do usuário autenticado' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de petições do usuário retornada com sucesso',
+    type: [PeticaoResponseDTO],
+  })
+  findMine(@Req() req: any): Promise<PeticaoResponseDTO[]> {
+    const usuarioId = req.user?.id || req.user?.userId;
+    return this.peticaoService.findByUsuario(usuarioId);
   }
 
   @Get(':id')
