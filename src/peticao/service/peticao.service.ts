@@ -45,6 +45,14 @@ export class PeticaoService {
     return this.mapToResponseDTO(savedPeticao);
   }
 
+  async findByUsuario(usuarioId: number): Promise<PeticaoResponseDTO[]> {
+    const peticoes = await this.peticaoRepository.find({
+      where: { usuarioId },
+      order: { createdAt: 'DESC' },
+    });
+    return peticoes.map((p) => this.mapToResponseDTO(p));
+  }
+
   async deleteManyWithFiles(
     peticoes: Array<Pick<PeticaoEntity, 'id' | 'caminhoArquivo'>>,
   ): Promise<{ deleted: number; fileDeleteFailures: number }> {
