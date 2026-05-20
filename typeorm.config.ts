@@ -13,6 +13,7 @@ import TipoPecaEntity from './src/processo/entity/tipo_peca.entity';
 import PecaEntity from './src/processo/entity/peca.entity';
 import { CasoJuridicoEntity } from './src/caso_juridico/entity/caso_juridico.entity';
 import { CasoPrecedenteSugeridoEntity } from './src/caso_juridico/entity/caso_precedente_sugerido.entity';
+import { SecoesPeticaoEntity } from './src/caso_juridico/entity/secoes_peticao.entity';
 
 export default new DataSource({
   type: 'postgres',
@@ -35,6 +36,7 @@ export default new DataSource({
     PecaEntity,
     CasoJuridicoEntity,
     CasoPrecedenteSugeridoEntity,
+    SecoesPeticaoEntity,
   ],
   migrations: ['src/migrations/*.ts'],
 });
