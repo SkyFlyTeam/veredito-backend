@@ -123,7 +123,7 @@ export class PeticaoController {
     return this.peticaoService.findAll();
   }
 
-  @Get('meus')
+  @Get('historico')
   @Roles('juiz', 'superuser')
   @ApiOperation({ summary: 'Listar petições do usuário autenticado' })
   @ApiResponse({
