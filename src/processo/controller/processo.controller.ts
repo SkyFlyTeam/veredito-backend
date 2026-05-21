@@ -1,3 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Body,
@@ -7,7 +12,6 @@ import {
   HttpCode,
   Param,
   ParseIntPipe,
-  Patch,
   Post,
   Req,
   UploadedFile,
@@ -33,7 +37,6 @@ import { UploadPeticaoDto } from 'src/peticao/dto/upload-peticao.dto';
 import { CreateProcessoDTO } from '../dtos/processo.dto';
 import { ProcessoService } from '../service/processo.service';
 import { ProcessoResponseDTO } from '../dtos/processo-response.dto';
-
 
 const processoFileInterceptorOptions = {
   storage: diskStorage({
@@ -101,6 +104,43 @@ export class ProcessoController {
     return this.processoService.findOne(id);
   }
 
+  @Post()
+  @HttpCode(201)
+  @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProcessoDTO })
+  @ApiOperation({ summary: 'Criar um novo processo jurídico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Processo jurídico criado',
+    type: ProcessoResponseDTO,
+  })
+  @Roles('superuser', 'juiz')
+  async createProcesso(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+    @Body() body: CreateProcessoDTO,
+  ): Promise<ProcessoResponseDTO> {
+    const usuarioId = req.user?.id || req.user?.userId;
+    if (!usuarioId) {
+      throw new BadRequestException('Usuário não autenticado');
+    }
+
+    return this.processoService.create({ ...body, file: file.path }, usuarioId);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Remover um processo jurídico' })
+  @ApiResponse({
+    status: 204,
+    description: 'Processo jurídico removido',
+  })
+  @Roles('superuser', 'juiz')
+  async deleteProcesso(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.processoService.delete(id);
+  }
+
   @Post('parts')
   @HttpCode(201)
   @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
@@ -120,44 +160,54 @@ export class ProcessoController {
     return this.textSearchPartsService.searchPeticaoInicial(file);
   }
 
-  @Post()
+  @Post('contestacao')
   @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/processos/contestacao';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
+          return cb(
+            new BadRequestException(
+              'Apenas arquivos .pdf, .docx e .txt são permitidos',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 300 * 1024 * 1024,
+      },
+    }),
+  )
   @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: CreateProcessoDTO })
-  @ApiOperation({ summary: 'Criar um novo processo jurídico' })
+  @ApiBody({ type: UploadPeticaoDto })
+  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
   @ApiResponse({
     status: 201,
-    description: 'Processo jurídico criado',
-    type: ProcessoResponseDTO,
+    description: 'Processo jurídico analizado e partes identificadas',
   })
   @Roles('superuser', 'juiz')
-  async createProcesso(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
-    @Body() body: CreateProcessoDTO,
-  ): Promise<ProcessoResponseDTO> {
+  async searchContestacao(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
-    const usuarioId = req.user?.id || req.user?.userId;
-    if (!usuarioId) {
-      throw new BadRequestException('Usuário não autenticado');
-    }
-
-    return this.processoService.create({ ...body, file: file.path }, usuarioId);
-  }
-
-  @Delete(':id')
-  @HttpCode(204)
-  @ApiOperation({ summary: 'Remover um processo jurídico' })
-  @ApiResponse({
-    status: 204,
-    description: 'Processo jurídico removido',
-  })
-  @Roles('superuser', 'juiz')
-  async deleteProcesso(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    await this.processoService.delete(id);
+    return this.textSearchPartsService.searchContestacao(file);
   }
 }
