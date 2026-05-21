@@ -29,6 +29,15 @@ export default class ProcessoJuridicoEntity implements EntityInterface {
   @Column({ name: 'area_direito', type: 'varchar', length: 150, nullable: true })
   area_direito: string;
 
+  @Column({ name: 'pedidos', type: 'text', nullable: true })
+  pedidos: string;
+
+  @Column({ name: 'fundamentos', type: 'text', nullable: true })
+  fundamentos: string;
+
+  @Column({ name: 'fatos', type: 'text', nullable: true })
+  fatos: string;
+
   @Column({
     name: 'created_at',
     type: 'timestamp',

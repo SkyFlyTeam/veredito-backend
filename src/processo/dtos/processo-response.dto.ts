@@ -6,6 +6,9 @@ export class ProcessoResponseDTO extends DTOInterface {
   instancia: number | null;
   classeProcessual: string | null;
   areaDireito: string | null;
+  pedidos: string | null;
+  fundamentos: string | null;
+  fatos: string | null;
   createdAt: Date;
   peticaoId: number | null;
   tribunalPrecedenteId: number | null;
