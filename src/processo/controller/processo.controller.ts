@@ -1,9 +1,15 @@
 import {
   BadRequestException,
   Body,
+  Delete,
   Controller,
+  Get,
   HttpCode,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
+  Req,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -24,6 +30,42 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { UploadPeticaoDto } from 'src/peticao/dto/upload-peticao.dto';
+import { CreateProcessoDTO } from '../dtos/processo.dto';
+import { ProcessoService } from '../service/processo.service';
+import { ProcessoResponseDTO } from '../dtos/processo-response.dto';
+
+
+const processoFileInterceptorOptions = {
+  storage: diskStorage({
+    destination: (req, file, cb) => {
+      const uploadPath = './uploads/processos/';
+      if (!existsSync(uploadPath)) {
+        mkdirSync(uploadPath, { recursive: true });
+      }
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+      cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
+      return cb(
+        new BadRequestException(
+          'Apenas arquivos .pdf, .docx e .txt são permitidos',
+        ),
+        false,
+      );
+    }
+
+    cb(null, true);
+  },
+  limits: {
+    fileSize: 300 * 1024 * 1024,
+  },
+};
 
 @ApiTags('Processos')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,43 +74,36 @@ import { UploadPeticaoDto } from 'src/peticao/dto/upload-peticao.dto';
 export class ProcessoController {
   constructor(
     private readonly textSearchPartsService: TextSearchPartsService,
+    private readonly processoService: ProcessoService,
   ) {}
+
+  @Get()
+  @Roles('juiz', 'superuser')
+  @ApiOperation({ summary: 'Listar todos os processos jurídicos' })
+  @ApiResponse({
+    status: 200,
+    description: 'Lista de processos jurídicos retornada com sucesso',
+    type: [ProcessoResponseDTO],
+  })
+  findAll(): Promise<ProcessoResponseDTO[]> {
+    return this.processoService.findAll();
+  }
+
+  @Get(':id')
+  @Roles('juiz', 'superuser')
+  @ApiOperation({ summary: 'Obter um processo jurídico pelo ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Processo jurídico retornado com sucesso',
+    type: ProcessoResponseDTO,
+  })
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<ProcessoResponseDTO> {
+    return this.processoService.findOne(id);
+  }
 
   @Post('parts')
   @HttpCode(201)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/processos/';
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
-          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
-          return cb(
-            new BadRequestException(
-              'Apenas arquivos .pdf, .docx e .txt são permitidos',
-            ),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 300 * 1024 * 1024,
-      },
-    }),
-  )
+  @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
   @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UploadPeticaoDto })
   @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
@@ -76,12 +111,53 @@ export class ProcessoController {
     status: 201,
     description: 'Processo jurídico analizado e partes identificadas',
   })
-  @Roles('superuser')
+  @Roles('superuser', 'juiz')
   async searchPeticao(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
     return this.textSearchPartsService.searchPeticaoInicial(file);
+  }
+
+  @Post()
+  @HttpCode(201)
+  @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProcessoDTO })
+  @ApiOperation({ summary: 'Criar um novo processo jurídico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Processo jurídico criado',
+    type: ProcessoResponseDTO,
+  })
+  @Roles('superuser', 'juiz')
+  async createProcesso(
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+    @Body() body: CreateProcessoDTO,
+  ): Promise<ProcessoResponseDTO> {
+    if (!file) {
+      throw new BadRequestException('Arquivo é obrigatório');
+    }
+
+    const usuarioId = req.user?.id || req.user?.userId;
+    if (!usuarioId) {
+      throw new BadRequestException('Usuário não autenticado');
+    }
+
+    return this.processoService.create({ ...body, file: file.path }, usuarioId);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Remover um processo jurídico' })
+  @ApiResponse({
+    status: 204,
+    description: 'Processo jurídico removido',
+  })
+  @Roles('superuser', 'juiz')
+  async deleteProcesso(@Param('id', ParseIntPipe) id: number): Promise<void> {
+    await this.processoService.delete(id);
   }
 }
