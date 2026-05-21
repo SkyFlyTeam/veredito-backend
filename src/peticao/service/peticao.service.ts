@@ -7,6 +7,7 @@ import { resolve, sep } from 'node:path';
 import { PeticaoEntity } from '../entity/peticao.entity';
 import { PeticaoResponseDTO } from '../dto/peticao-response.dto';
 import { TextProcessingService } from '../pipeline-services/word_processing/text-processing.service';
+import { PrecedenteSugeridoService } from '../../precedents/service/precedente_sugerido.service';
 
 @Injectable()
 export class PeticaoService {
@@ -16,11 +17,49 @@ export class PeticaoService {
     @InjectRepository(PeticaoEntity)
     private readonly peticaoRepository: Repository<PeticaoEntity>,
     private readonly textProcessingService: TextProcessingService,
+    private readonly precedenteSugeridoService: PrecedenteSugeridoService,
   ) {}
 
   async findAll(): Promise<PeticaoResponseDTO[]> {
     const peticoes = await this.peticaoRepository.find();
     return peticoes.map((p) => this.mapToResponseDTO(p));
+  }
+  async findHistoricoByPeticao(peticaoId: number, usuarioId: number) {
+    const peticao = await this.peticaoRepository.findOne({
+      where: { id: peticaoId, usuarioId },
+    });
+
+    if (!peticao) {
+      throw new NotFoundException(`Petição com ID ${peticaoId} não encontrada`);
+    }
+
+    const precedentes =
+      await this.precedenteSugeridoService.findByPeticao(peticaoId);
+
+    return {
+      ...this.mapToResponseDTO(peticao),
+      precedentesSugeridos: precedentes,
+    };
+  }
+
+  async findHistoricoByUsuario(usuarioId: number) {
+    const peticoes = await this.peticaoRepository.find({
+      where: { usuarioId },
+      order: { createdAt: 'DESC' },
+    });
+
+    return Promise.all(
+      peticoes.map(async (peticao) => {
+        const precedentes = await this.precedenteSugeridoService.findByPeticao(
+          peticao.id,
+        );
+
+        return {
+          ...this.mapToResponseDTO(peticao),
+          precedentesSugeridos: precedentes,
+        };
+      }),
+    );
   }
 
   async findOne(id: number): Promise<PeticaoResponseDTO> {
