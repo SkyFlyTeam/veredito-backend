@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
@@ -120,6 +124,9 @@ export class ProcessoService {
       instancia: processo.instancia,
       classeProcessual: processo.classe_processual,
       areaDireito: processo.area_direito,
+      pedidos: processo.pedidos,
+      fundamentos: processo.fundamentos,
+      fatos: processo.fatos,
       createdAt: processo.created_at,
       peticaoId: processo.peticao?.id ?? null,
       tribunalPrecedenteId: processo.tribunal_precedente?.id ?? null,
