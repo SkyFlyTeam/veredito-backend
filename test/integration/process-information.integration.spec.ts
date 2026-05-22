@@ -1,9 +1,11 @@
 /**
- * Teste de integração real com a OpenAI.
- * Requer OPENAI_API_KEY válida no .env.
+ * 
+ * 
  *
- * Executar com:
- *   npx jest test/integration/process-information.integration.spec.ts --no-coverage --testTimeout=60000
+ * use:
+ *   npx jest test/integration/process-information.integration.spec.ts --no-coverage
+ *
+ * 
  */
 
 jest.setTimeout(60000);
@@ -16,6 +18,9 @@ import { ConfigModule } from '@nestjs/config';
 import { ProcessInformationService } from '../../src/processo/service/process-information.service';
 import { ProcessPieces } from '../../src/processo/types/process-pieces.type';
 import { ProcessInformation } from '../../src/processo/types/process-information.type';
+
+const hasApiKey = !!process.env.OPENAI_API_KEY;
+const describeIfKey = hasApiKey ? describe : describe.skip;
 
 const PETICAO_EXEMPLO = `
 EXCELENTÍSSIMO SENHOR DOUTOR JUIZ DE DIREITO DA VARA CÍVEL DA COMARCA DE SÃO PAULO
@@ -81,7 +86,7 @@ function countParagraphs(text: string): number {
   return text.split(/\n\n+/).filter((p) => p.trim().length > 0).length;
 }
 
-describe('ProcessInformationService (Integração Real com OpenAI)', () => {
+describeIfKey('ProcessInformationService (Integração Real com OpenAI)', () => {
   let service: ProcessInformationService;
 
   beforeAll(async () => {
