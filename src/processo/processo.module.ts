@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProcessoController } from './controller/processo.controller';
 import { TextSearchPartsService } from './service/text-search-parts.service';
@@ -11,6 +12,7 @@ import { TipoPecaSeed } from './seed/tipo-peca.seed';
 
 @Module({
   imports: [
+    ConfigModule,
     TypeOrmModule.forFeature([
       ProcessoJuridicoEntity,
       TipoPecaEntity,

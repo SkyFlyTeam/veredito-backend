@@ -1,12 +1,29 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 import { WordProcessingService } from '../../peticao/pipeline-services/word_processing/word-processing.service';
-import { findPetitionCandidatesByPages } from './page-services/find-range-by-page.service';
-import { PeticionSignals } from '../config/petition-signals.config';
 import { ContestacaoSignals } from '../config/contestacao-signals.config';
+import { PeticionSignals } from '../config/petition-signals.config';
+import { TipoPecaEnumerator } from '../enumerator/tipo-peca.enumerator';
+import { PetitionCandidate } from '../types/petition-candidate.type';
+import { findPetitionCandidatesByPages } from './page-services/find-range-by-page.service';
+
+const MAX_VALIDATION_CANDIDATES = 5;
+const MAX_CANDIDATE_TEXT_LENGTH = 3000;
 
 @Injectable()
 export class TextSearchPartsService {
-  constructor(private readonly wordProcessingService: WordProcessingService) {}
+  private readonly logger = new Logger(TextSearchPartsService.name);
+  private readonly openai: OpenAI;
+
+  constructor(
+    private readonly wordProcessingService: WordProcessingService,
+    private readonly configService: ConfigService,
+  ) {
+    this.openai = new OpenAI({
+      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+    });
+  }
 
   async searchPeticaoInicial(file: Express.Multer.File) {
     const pages = await this.wordProcessingService.extractPages(file);
@@ -26,29 +43,12 @@ export class TextSearchPartsService {
       );
     }
 
-    return {
-      startPage: bestCandidate.startPage,
-      endPage: bestCandidate.endPage,
-
-      score: bestCandidate.score,
-
-      startScore: bestCandidate.startScore,
-      middleScore: bestCandidate.middleScore,
-      endScore: bestCandidate.endScore,
-      positionScore: bestCandidate.positionScore,
-
-      matchedSignals: bestCandidate.matchedSignals,
-
-      text: bestCandidate.text,
-    };
+    return this.formatCandidateResponse(bestCandidate);
   }
 
-  // TODO: Implementar realmente esse método depois de testar
   async searchContestacao(file: Express.Multer.File) {
-    // Remove o texto do arquivo recebido
     const pages = await this.wordProcessingService.extractPages(file);
 
-    // Encontra os candidatos
     const candidates = findPetitionCandidatesByPages(
       pages,
       ContestacaoSignals.START_SIGNALS,
@@ -56,7 +56,6 @@ export class TextSearchPartsService {
       ContestacaoSignals.END_SIGNALS,
     );
 
-    // Retorna o melhor candidato
     const bestCandidate = candidates[0];
 
     if (!bestCandidate) {
@@ -65,22 +64,96 @@ export class TextSearchPartsService {
       );
     }
 
-    return candidates;
+    const validationCandidates = candidates.slice(0, MAX_VALIDATION_CANDIDATES);
+    const validatedIndex = await this.validatePiece(
+      TipoPecaEnumerator.CONTESTACAO,
+      validationCandidates,
+    );
 
-    /*return {
-      startPage: bestCandidate.startPage,
-      endPage: bestCandidate.endPage,
+    const selectedCandidate =
+      validatedIndex === null || validatedIndex === -1
+        ? bestCandidate
+        : validationCandidates[validatedIndex];
 
-      score: bestCandidate.score,
+    if (!selectedCandidate) {
+      throw new NotFoundException(
+        'Não foi possível identificar a contestação no processo.',
+      );
+    }
 
-      startScore: bestCandidate.startScore,
-      middleScore: bestCandidate.middleScore,
-      endScore: bestCandidate.endScore,
-      positionScore: bestCandidate.positionScore,
+    return this.formatCandidateResponse(selectedCandidate);
+  }
 
-      matchedSignals: bestCandidate.matchedSignals,
+  private formatCandidateResponse(candidate: PetitionCandidate) {
+    return {
+      startPage: candidate.startPage,
+      endPage: candidate.endPage,
 
-      text: bestCandidate.text,
-    };*/
+      score: candidate.score,
+
+      startScore: candidate.startScore,
+      middleScore: candidate.middleScore,
+      endScore: candidate.endScore,
+      positionScore: candidate.positionScore,
+
+      matchedSignals: candidate.matchedSignals,
+
+      text: candidate.text,
+    };
+  }
+
+  private async validatePiece(
+    tipoPeca: TipoPecaEnumerator,
+    candidates: PetitionCandidate[],
+  ): Promise<number | null> {
+    try {
+      this.logger.log(`Validating piece of type: ${tipoPeca}`);
+
+      const candidateDescriptions = candidates
+        .map(
+          (candidate, index) =>
+            `Indice ${index}: paginas ${candidate.startPage}-${candidate.endPage}, score ${candidate.score}\n${candidate.text.substring(0, MAX_CANDIDATE_TEXT_LENGTH)}`,
+        )
+        .join('\n\n---\n\n');
+
+      const prompt = `Você é um assistente jurídico especializado em análise de processos judiciais.
+        Sua tarefa é analisar os candidatos abaixo e decidir qual deles é mais provável de ser uma ${tipoPeca}.
+        ${candidateDescriptions}
+        Responda somente com JSON no formato {"index": 0}. Use o índice original do candidato. Caso nenhum candidato seja relevante, responda {"index": -1}.`;
+
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Você é um assistente jurídico altamente técnico. Responda apenas em formato JSON.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        temperature: 0.2,
+        response_format: { type: 'json_object' },
+      });
+
+      const content = response.choices[0]?.message?.content || '{}';
+      const result = JSON.parse(content);
+      const parsedIndex = Number(result.index);
+
+      if (!Number.isInteger(parsedIndex)) {
+        return null;
+      }
+
+      if (parsedIndex < -1 || parsedIndex >= candidates.length) {
+        return null;
+      }
+
+      return parsedIndex;
+    } catch (error) {
+      this.logger.error('Error validating piece', error.stack);
+      return null;
+    }
   }
 }
