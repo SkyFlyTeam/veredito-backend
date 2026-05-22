@@ -12,6 +12,7 @@ jest.mock('mammoth', () => ({
 import { TextSearchPartsService } from '../../src/processo/service/text-search-parts.service';
 import { WordProcessingService } from '../../src/peticao/pipeline-services/word_processing/word-processing.service';
 import { ExtractedPage } from '../../src/processo/types/extracted-page.type';
+import { ConfigService } from '@nestjs/config';
 
 const makeFile = (): Express.Multer.File =>
   ({
@@ -26,8 +27,12 @@ describe('TextSearchPartsService', () => {
         .mockResolvedValue(pages),
     } as unknown as WordProcessingService;
 
+    const configService = {
+      get: jest.fn(() => 'test-api-key'),
+    } as unknown as ConfigService;
+
     return {
-      service: new TextSearchPartsService(wordProcessingService),
+      service: new TextSearchPartsService(wordProcessingService, configService),
       wordProcessingService,
     };
   };
