@@ -133,7 +133,7 @@ export class PeticaoController {
   })
   findMine(@Req() req: any): Promise<PeticaoResponseDTO[]> {
     const usuarioId = req.user?.id || req.user?.userId;
-    return this.peticaoService.findHistoricoByUsuario(usuarioId);
+    return this.peticaoService.findByUsuario(usuarioId);
   }
 
   @Get(':id')
