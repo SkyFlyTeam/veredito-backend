@@ -12,7 +12,7 @@ describe('PeticaoController - Histórico do Usuário', () => {
 
   beforeEach(() => {
     service = {
-      findByUsuario: jest.fn(),
+      findHistoricoByUsuario: jest.fn(),
       findOne: jest.fn(),
     };
 
@@ -35,7 +35,7 @@ describe('PeticaoController - Histórico do Usuário', () => {
         },
       ];
 
-      (service.findByUsuario as jest.Mock)
+      (service.findHistoricoByUsuario as jest.Mock)
         .mockResolvedValueOnce(response);
 
       const req = {
@@ -48,11 +48,11 @@ describe('PeticaoController - Histórico do Usuário', () => {
 
       expect(result).toEqual(response);
 
-      expect(service.findByUsuario).toHaveBeenCalledWith(1);
+      expect(service.findHistoricoByUsuario).toHaveBeenCalledWith(1);
     });
 
     it('should throw NotFoundException if no petitions are found', async () => {
-      (service.findByUsuario as jest.Mock)
+      (service.findHistoricoByUsuario as jest.Mock)
         .mockRejectedValueOnce(
           new NotFoundException(
             'Nenhuma petição encontrada',
