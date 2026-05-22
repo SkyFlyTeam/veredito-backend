@@ -1,6 +1,6 @@
 export type ProcessPieces = {
     peticao: string;
-    constentacao?: string;
+    contestacao?: string;
     sentenca?: string;
     recurso?: string;
 };
