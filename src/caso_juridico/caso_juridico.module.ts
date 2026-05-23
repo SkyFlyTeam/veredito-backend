@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { CasoJuridicoEntity } from './entity/caso_juridico.entity';
 import { CasoPrecedenteSugeridoEntity } from './entity/caso_precedente_sugerido.entity';
 import { SecoesPeticaoEntity } from './entity/secoes_peticao.entity';
-import { CasoJuridicoService } from './service/caso-juridico.service';
-import { CasoJuridicoController } from './controller/caso-juridico.controller';
+import { CasoJuridicoExtractionService } from './service/caso-juridico-extraction.service';
+import { CasoJuridicoExtractionController } from './controller/caso-juridico-extraction.controller';
+import { WordProcessingService } from '../peticao/pipeline-services/word_processing/word-processing.service';
 
 @Module({
   imports: [
@@ -16,8 +18,11 @@ import { CasoJuridicoController } from './controller/caso-juridico.controller';
       SecoesPeticaoEntity,
     ]),
   ],
-  providers: [CasoJuridicoService],
-  controllers: [CasoJuridicoController],
-  exports: [TypeOrmModule, CasoJuridicoService],
+  providers: [
+    CasoJuridicoExtractionService,
+    WordProcessingService, // reutilizado para extração de texto dos arquivos
+  ],
+  controllers: [CasoJuridicoExtractionController],
+  exports: [TypeOrmModule, CasoJuridicoExtractionService],
 })
-export class CasoJuridicoModule { }
+export class CasoJuridicoModule {}
