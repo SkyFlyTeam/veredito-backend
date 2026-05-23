@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { CasoJuridicoEntity } from './caso_juridico.entity';
 import EntityInterface from 'src/interfaces/entity.interface';
 
@@ -7,15 +7,20 @@ export class SecoesPeticaoEntity implements EntityInterface {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 150 })
   titulo: string;
 
   @Column({ type: 'text' })
   conteudo: string;
 
-  @OneToMany(
+  @Column({ name: 'caso_juridico_id' })
+  casoJuridicoId: number;
+
+  @ManyToOne(
     () => CasoJuridicoEntity,
     (casoJuridico) => casoJuridico.secoesPeticao,
+    { onDelete: 'CASCADE' },
   )
-  casosJuridicos: CasoJuridicoEntity[];
+  @JoinColumn({ name: 'caso_juridico_id' })
+  casoJuridico: CasoJuridicoEntity;
 }

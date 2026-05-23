@@ -13,15 +13,17 @@ describe('SecoesPeticaoEntity', () => {
     entity.id = 1;
     entity.titulo = 'Dos Fatos';
     entity.conteudo = 'Conteúdo da seção detalhando os fatos do caso.';
+    entity.casoJuridicoId = 1;
 
     const casoJuridico = new CasoJuridicoEntity();
     casoJuridico.id = 1;
-    entity.casosJuridicos = [casoJuridico];
+    entity.casoJuridico = casoJuridico;
 
     expect(entity.id).toBe(1);
     expect(entity.titulo).toBe('Dos Fatos');
     expect(entity.conteudo).toBe('Conteúdo da seção detalhando os fatos do caso.');
-    expect(entity.casosJuridicos).toHaveLength(1);
-    expect(entity.casosJuridicos[0].id).toBe(1);
+    expect(entity.casoJuridicoId).toBe(1);
+    expect(entity.casoJuridico).toBe(casoJuridico);
+    expect(entity.casoJuridico.id).toBe(1);
   });
 });
