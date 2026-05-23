@@ -25,7 +25,7 @@ export class CasoJuridicoService {
 
   async gerarPeticaoInicial(
     casoId: number,
-  ): Promise<SecoesPeticaoEntity> {
+  ): Promise<SecoesPeticaoEntity[]> {
     this.logger.log(`Iniciando geração de petição inicial para o Caso Jurídico ID: ${casoId}`);
 
     const caso = await this.casoRepository.findOne({
@@ -45,7 +45,7 @@ export class CasoJuridicoService {
         messages: [
           {
             role: 'system',
-            content: 'Você é um assistente jurídico brasileiro altamente técnico. Responda apenas no formato JSON contendo as chaves "titulo" (uma string curta, por exemplo "Seções da Petição Inicial") e "conteudo" (o texto contendo apenas as seções "DOS FATOS" e "DOS PEDIDOS" em formato markdown ou texto corrido estruturado).',
+            content: 'Você é um assistente jurídico brasileiro altamente técnico. Responda apenas no formato JSON contendo uma lista de seções na chave "secoes", onde cada seção possui as chaves "titulo" (o título da seção, ex: "DOS FATOS", "DA TUTELA ANTECIPADA", etc.) e "conteudo" (o corpo daquela seção). Não inclua cabeçalho, rodapé ou introdução. Não utilize numeração (romana ou cardinal) nos títulos das seções (escreva apenas "DOS FATOS", "DOS PEDIDOS", etc., sem prefixos como "I – " ou "1 – "). As seções obrigatórias são apenas as de fatos e pedidos. As seções intermediárias de direito são opcionais e devem ser criadas de forma dinâmica e com títulos específicos baseados no caso (evitando o título genérico "DO DIREITO"), ou omitidas se não houver fundamentação que as justifique.',
           },
           {
             role: 'user',
@@ -57,26 +57,27 @@ export class CasoJuridicoService {
       });
 
       const jsonResponse = JSON.parse(response.choices[0]?.message?.content || '{}');
-      const titulo = jsonResponse.titulo || 'Petição Inicial';
-      const conteudo = jsonResponse.conteudo;
+      const secoesJson = jsonResponse.secoes;
 
-      if (!conteudo) {
-        throw new Error('A resposta da OpenAI não conteve a seção de conteúdo da petição.');
+      if (!secoesJson || !Array.isArray(secoesJson) || secoesJson.length === 0) {
+        throw new Error('A resposta da OpenAI não conteve a lista de seções da petição.');
       }
 
-      // Salva a nova entidade secoes_peticao
-      const novaSecao = this.secoesPeticaoRepository.create({
-        titulo,
-        conteudo,
-      });
-      const secaoSalva = await this.secoesPeticaoRepository.save(novaSecao);
+      // Remove as seções antigas associadas a este caso
+      await this.secoesPeticaoRepository.delete({ casoJuridicoId: casoId });
 
-      // Associa a seção de petição ao caso jurídico correspondente
-      caso.secoesPeticao = secaoSalva;
-      await this.casoRepository.save(caso);
+      // Salva as novas entidades secoes_peticao
+      const novasSecoes = secoesJson.map((s) => {
+        return this.secoesPeticaoRepository.create({
+          titulo: s.titulo || 'Seção',
+          conteudo: s.conteudo || '',
+          casoJuridicoId: casoId,
+        });
+      });
+      const secoesSalvas = await this.secoesPeticaoRepository.save(novasSecoes);
 
       this.logger.log(`Petição inicial gerada e salva com sucesso para o Caso Jurídico ID: ${casoId}`);
-      return secaoSalva;
+      return secoesSalvas;
     } catch (error) {
       this.logger.error(`Falha ao gerar petição inicial para o Caso Jurídico ID ${casoId}: ${error.message}`, error.stack);
       throw error;
@@ -84,8 +85,13 @@ export class CasoJuridicoService {
   }
 
   private construirPrompt(caso: CasoJuridicoEntity): string {
-    let prompt = `Você deve redigir APENAS as seções "DOS FATOS" e "DOS PEDIDOS" para uma petição inicial com base no seguinte caso jurídico brasileiro.
-ATENÇÃO: Não inclua endereçamento, qualificação das partes, introdução, fatos/direito misturados em outras seções, nem encerramento. Gere única e exclusivamente as duas seções solicitadas: "DOS FATOS" e "DOS PEDIDOS".
+    let prompt = `Você deve redigir as seções de uma petição inicial com base no caso jurídico fornecido.
+As únicas seções obrigatórias são "DOS FATOS" e "DOS PEDIDOS". 
+As demais seções (como fundamentações de direito específicas, tutelas de urgência, etc.) são OPCIONAIS e devem ser geradas de forma dinâmica, com títulos específicos e focados na tese do caso (por exemplo, "DA TUTELA DE URGÊNCIA", "DO DANO MORAL", "DA RESCISÃO INDIRETA"). 
+EVITE usar o título genérico "DO DIREITO". Se o caso for muito simples e não exigir teses estruturadas adicionais, gere apenas as duas seções obrigatórias.
+
+ATENÇÃO: Não utilize numeração romana ou ordinária nos títulos das seções (por exemplo: escreva apenas 'DOS FATOS', 'DOS PEDIDOS', 'DO DANO MORAL', sem prefixos como 'I – ', '1. ', etc.).
+ATENÇÃO: Não gere cabeçalho (como endereçamento ao juiz, qualificação das partes, qualificação do autor/réu, título da ação) nem rodapé/encerramento (como "Termos em que pede deferimento", assinatura, data, local, etc.). Limite-se estritamente a gerar as seções estruturadas da petição.
 
 Informações do caso:
 - Área do Direito: ${caso.area_direito}
@@ -97,31 +103,34 @@ ${caso.fatos_estruturados ? `- Fatos Estruturados do Caso: ${caso.fatos_estrutur
 
 Diretrizes para a geração:
 1. Seção "DOS FATOS": Elabore e detalhe o ocorrido de forma técnica e objetiva com base nos fatos fornecidos.
-2. Seção "DOS PEDIDOS": Liste de forma concisa e técnica todas as pretensões (citação, procedência dos pedidos principais, condenações de sucumbência, produção de provas, e valor da causa com placeholder).
-3. Não crie cabeçalho ou rodapé. Limite-se estritamente às duas seções.
+2. Seções Intermediárias de Direito (OPCIONAIS): Crie seções específicas para cada tese de direito relevante (ex: "DO DANO MORAL", "DA TUTELA ANTECIPADA", "DA INVERSÃO DO ÔNUS DA PROVA"). Não agrupe tudo sob um título genérico "DO DIREITO" e não force a criação dessas seções se o caso não exigir.
+3. Seção "DOS PEDIDOS": Liste de forma concisa e técnica todas as pretensões (citação, procedência dos pedidos principais, condenações de sucumbência, produção de provas, e valor da causa com placeholder).
 `;
 
     prompt += `
-Abaixo estão fornecidos trechos de exemplos das seções "DOS FATOS" e "DOS PEDIDOS" de petições reais para guiar o estilo, a linguagem jurídica rebuscada e o padrão de escrita técnica. Siga este padrão de escrita ao redigir as seções:
+Abaixo estão exemplos para guiar a estrutura dinâmica das seções (cabeçalhos e rodapés foram removidos nos exemplos e NÃO devem ser gerados):
 
---- EXEMPLO 1 ---
-DOS FATOS:
-O(a) autor(a) encontra-se regularmente matriculado(a) no curso de [nome do curso], oferecido pela universidade ré, conforme comprovam os documentos anexos (ID [●]).
-Desde seu ingresso na instituição, a universidade tem exigido, para a efetivação da matrícula em cada período letivo, o pagamento de uma taxa denominada “taxa de matrícula” ou “contribuição de serviços acadêmicos”, cujo recolhimento é imposto como condição para o exercício regular do direito à educação, inclusive com bloqueio de matrícula em caso de inadimplemento.
-No presente semestre, por exemplo, foi cobrado o valor de R$ [●] (comprovante ID [●]), sem qualquer contraprestação específica que justificasse tal exigência, sendo o valor vinculado apenas ao ato administrativo de matrícula acadêmica, procedimento inerente ao funcionamento regular da instituição pública de ensino.
-Tal cobrança tem se repetido de forma sistemática desde o ingresso do(a) autor(a) na universidade, sob a ameaça de cancelamento da matrícula em caso de não pagamento, conforme se comprova pelos documentos de ID [●] e comunicações eletrônicas anexas.
+--- EXEMPLO 1 (Caso com tutela de urgência e direito específico) ---
+[SEÇÕES GERADAS NO JSON]
+DOS FATOS
+O(a) autor(a) é estudante regularmente matriculado no curso... [conteúdo dos fatos]
 
-DOS PEDIDOS:
-Ante o exposto, requer-se a Vossa Excelência:
-1. A concessão de tutela provisória de urgência, para determinar que a ré se abstenha de exigir o pagamento de qualquer valor a título de “taxa de matrícula” ou similar como condição para a realização de matrícula nos próximos períodos letivos, sob pena de multa diária;
-2. A citação da ré para, querendo, apresentar resposta no prazo legal;
-3. Ao final, seja julgada PROCEDENTE a presente ação para:
-a. Declarar a nulidade da cobrança de taxa de matrícula ou qualquer outra denominação equivalente, por ausência de amparo legal e afronta à Constituição;
-b. Condenar a ré à repetição do indébito, no valor total de R$ [●], correspondente às quantias indevidamente pagas nos semestres [●], atualizadas monetariamente desde cada desembolso e acrescidas de juros legais desde a citação;
-c. Confirmar a obrigação de não fazer, consistente na vedação à ré de exigir qualquer valor como condição para efetivação de matrícula em curso de graduação pública.
-4. A condenação da ré ao pagamento das custas processuais e honorários advocatícios, na forma do artigo 85 do CPC.
-Protesta provar o alegado por todos os meios admitidos em direito, especialmente prova documental e pericial contábil, se necessário.
-Dá-se à causa o valor de R$ [●].
+DA TUTELA DE URGÊNCIA ANTECIPADA
+Nos termos do artigo 300 do CPC, a concessão de tutela de urgência exige... [fundamentação da urgência]
+
+DO DIREITO À GRATUIDADE DO ENSINO SUPERIOR PÚBLICO
+Nos termos do artigo 206, inciso IV, da Constituição... [fundamentação do direito à gratuidade]
+
+DOS PEDIDOS
+Ante o exposto, requer-se: 1. A concessão da tutela provisória... 2. A citação da ré... 3. A procedência...
+
+--- EXEMPLO 2 (Caso simples, gerando apenas Fatos e Pedidos) ---
+[SEÇÕES GERADAS NO JSON]
+DOS FATOS
+O autor adquiriu um produto eletrônico junto ao site da ré... [conteúdo dos fatos simples]
+
+DOS PEDIDOS
+Ante o exposto, requer-se: 1. A citação da ré... 2. A condenação à entrega do produto...
 `;
 
     return prompt;

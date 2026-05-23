@@ -53,12 +53,11 @@ export class CasoJuridicoEntity implements EntityInterface {
   @JoinColumn({ name: 'usuario_id' })
   usuario: UserEntity;
 
-  @Column({ name: 'secoes_peticao_id', nullable: true })
-  secoesPeticaoId: number;
-
-  @ManyToOne(() => SecoesPeticaoEntity, (secoesPeticao) => secoesPeticao.casosJuridicos, { nullable: true })
-  @JoinColumn({ name: 'secoes_peticao_id' })
-  secoesPeticao: SecoesPeticaoEntity;
+  @OneToMany(
+    () => SecoesPeticaoEntity,
+    (secoesPeticao) => secoesPeticao.casoJuridico,
+  )
+  secoesPeticao: SecoesPeticaoEntity[];
 
   @ManyToOne(() => TribunalPrecedenteEntity, { nullable: true })
   @JoinColumn({ name: 'tribunal_precedente_id' })

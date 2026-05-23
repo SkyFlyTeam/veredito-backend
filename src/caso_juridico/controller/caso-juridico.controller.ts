@@ -33,7 +33,7 @@ export class CasoJuridicoController {
   @ApiResponse({
     status: 201,
     description: 'Petição inicial gerada com sucesso',
-    type: SecoesPeticaoEntity,
+    type: [SecoesPeticaoEntity],
   })
   @ApiResponse({
     status: 404,
@@ -41,7 +41,7 @@ export class CasoJuridicoController {
   })
   async gerarPeticao(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<SecoesPeticaoEntity> {
+  ): Promise<SecoesPeticaoEntity[]> {
     return this.casoJuridicoService.gerarPeticaoInicial(id);
   }
 }
