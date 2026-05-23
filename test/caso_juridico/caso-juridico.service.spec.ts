@@ -26,8 +26,16 @@ describe('CasoJuridicoService', () => {
               {
                 message: {
                   content: JSON.stringify({
-                    titulo: 'Petição Inicial de Teste',
-                    conteudo: 'Conteúdo da petição gerado pelo modelo.',
+                    secoes: [
+                      {
+                        titulo: 'DOS FATOS',
+                        conteudo: 'Conteúdo da petição gerado pelo modelo.',
+                      },
+                      {
+                        titulo: 'DOS PEDIDOS',
+                        conteudo: 'Conteúdo dos pedidos.',
+                      }
+                    ]
                   }),
                 },
               },
@@ -47,6 +55,7 @@ describe('CasoJuridicoService', () => {
     secoesPeticaoRepositoryMock = {
       create: jest.fn(),
       save: jest.fn(),
+      delete: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -89,15 +98,26 @@ describe('CasoJuridicoService', () => {
 
     casoRepositoryMock.findOne.mockResolvedValueOnce(mockCaso);
 
-    const mockSecao = {
-      id: 10,
-      titulo: 'Petição Inicial de Teste',
-      conteudo: 'Conteúdo da petição gerado pelo modelo.',
-    } as SecoesPeticaoEntity;
+    const mockSecoes = [
+      {
+        id: 10,
+        titulo: 'DOS FATOS',
+        conteudo: 'Conteúdo da petição gerado pelo modelo.',
+        casoJuridicoId: 1,
+      },
+      {
+        id: 11,
+        titulo: 'DOS PEDIDOS',
+        conteudo: 'Conteúdo dos pedidos.',
+        casoJuridicoId: 1,
+      }
+    ] as SecoesPeticaoEntity[];
 
-    secoesPeticaoRepositoryMock.create.mockReturnValueOnce(mockSecao);
-    secoesPeticaoRepositoryMock.save.mockResolvedValueOnce(mockSecao);
-    casoRepositoryMock.save.mockResolvedValueOnce(mockCaso);
+    secoesPeticaoRepositoryMock.delete.mockResolvedValueOnce({ affected: 2 } as any);
+    secoesPeticaoRepositoryMock.create
+      .mockReturnValueOnce(mockSecoes[0])
+      .mockReturnValueOnce(mockSecoes[1]);
+    secoesPeticaoRepositoryMock.save.mockResolvedValueOnce(mockSecoes as any);
 
     const result = await service.gerarPeticaoInicial(1);
 
@@ -108,17 +128,21 @@ describe('CasoJuridicoService', () => {
     expect(openaiMock.chat.completions.create).toHaveBeenCalled();
     const promptChamada = (openaiMock.chat.completions.create as jest.Mock).mock.calls[0][0] as any;
     expect(promptChamada.messages[1].content).toContain('Área do Direito: Civil');
-    expect(promptChamada.messages[1].content).toContain('--- EXEMPLO 1 ---');
+    expect(promptChamada.messages[1].content).toContain('--- EXEMPLO 1 (Caso com tutela de urgência e direito específico) ---');
 
-    expect(secoesPeticaoRepositoryMock.create).toHaveBeenCalledWith({
-      titulo: 'Petição Inicial de Teste',
+    expect(secoesPeticaoRepositoryMock.delete).toHaveBeenCalledWith({ casoJuridicoId: 1 });
+    expect(secoesPeticaoRepositoryMock.create).toHaveBeenNthCalledWith(1, {
+      titulo: 'DOS FATOS',
       conteudo: 'Conteúdo da petição gerado pelo modelo.',
+      casoJuridicoId: 1,
     });
-    expect(secoesPeticaoRepositoryMock.save).toHaveBeenCalledWith(mockSecao);
-    expect(casoRepositoryMock.save).toHaveBeenCalledWith(
-      expect.objectContaining({ secoesPeticao: mockSecao }),
-    );
-    expect(result).toBe(mockSecao);
+    expect(secoesPeticaoRepositoryMock.create).toHaveBeenNthCalledWith(2, {
+      titulo: 'DOS PEDIDOS',
+      conteudo: 'Conteúdo dos pedidos.',
+      casoJuridicoId: 1,
+    });
+    expect(secoesPeticaoRepositoryMock.save).toHaveBeenCalledWith(mockSecoes);
+    expect(result).toBe(mockSecoes);
   });
 
   it('deve lançar NotFoundException se o caso não existir', async () => {
