@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
@@ -7,9 +9,10 @@ import { PeticionSignals } from '../config/petition-signals.config';
 import { TipoPecaEnumerator } from '../enumerator/tipo-peca.enumerator';
 import { PetitionCandidate } from '../types/petition-candidate.type';
 import { findPetitionCandidatesByPages } from './page-services/find-range-by-page.service';
+import { SentencaSignals } from '../config/sentenca-signals.config';
+import { RecursoSignals } from '../config/recurso-signals.config';
 
-const MAX_VALIDATION_CANDIDATES = 5;
-const MAX_CANDIDATE_TEXT_LENGTH = 3000;
+const MAX_CANDIDATE_TEXT_LENGTH = 5000;
 
 @Injectable()
 export class TextSearchPartsService {
@@ -55,33 +58,61 @@ export class TextSearchPartsService {
       ContestacaoSignals.MIDDLE_SIGNALS,
       ContestacaoSignals.END_SIGNALS,
     );
-
-    const bestCandidate = candidates[0];
-
-    if (!bestCandidate) {
-      throw new NotFoundException(
-        'Não foi possível identificar a contestação no processo.',
-      );
-    }
-
-    const validationCandidates = candidates.slice(0, MAX_VALIDATION_CANDIDATES);
     const validatedIndex = await this.validatePiece(
       TipoPecaEnumerator.CONTESTACAO,
-      validationCandidates,
+      candidates,
     );
 
-    const selectedCandidate =
-      validatedIndex === null || validatedIndex === -1
-        ? bestCandidate
-        : validationCandidates[validatedIndex];
-
-    if (!selectedCandidate) {
-      throw new NotFoundException(
-        'Não foi possível identificar a contestação no processo.',
-      );
+    if (validatedIndex === null || validatedIndex === -1) {
+      return null;
+    } else {
+      return this.formatCandidateResponse(candidates[validatedIndex]);
     }
+  }
 
-    return this.formatCandidateResponse(selectedCandidate);
+  async searchRecurso(file: Express.Multer.File) {
+    const pages = await this.wordProcessingService.extractPages(file);
+
+    const candidates = findPetitionCandidatesByPages(
+      pages,
+      RecursoSignals.START_SIGNALS,
+      RecursoSignals.MIDDLE_SIGNALS,
+      RecursoSignals.END_SIGNALS,
+    );
+    const validatedIndex = await this.validatePiece(
+      TipoPecaEnumerator.RECURSO,
+      candidates,
+    );
+
+    if (validatedIndex === null || validatedIndex === -1) {
+      return null;
+    } else {
+      return this.formatCandidateResponse(candidates[validatedIndex]);
+    }
+  }
+
+  async searchSentenca(file: Express.Multer.File) {
+    const pages = await this.wordProcessingService.extractPages(file);
+
+    const candidates = findPetitionCandidatesByPages(
+      pages,
+      SentencaSignals.START_SIGNALS,
+      SentencaSignals.MIDDLE_SIGNALS,
+      SentencaSignals.END_SIGNALS,
+    );
+
+    const validatedIndex = await this.validatePiece(
+      TipoPecaEnumerator.SENTENCA,
+      candidates,
+    );
+
+    this.logger.log(`Validated index: ${validatedIndex}`);
+
+    if (validatedIndex === null || validatedIndex === -1) {
+      return null;
+    } else {
+      return this.formatCandidateResponse(candidates[validatedIndex]);
+    }
   }
 
   private formatCandidateResponse(candidate: PetitionCandidate) {
@@ -112,14 +143,25 @@ export class TextSearchPartsService {
       const candidateDescriptions = candidates
         .map(
           (candidate, index) =>
-            `Indice ${index}: paginas ${candidate.startPage}-${candidate.endPage}, score ${candidate.score}\n${candidate.text.substring(0, MAX_CANDIDATE_TEXT_LENGTH)}`,
+            `Indice ${index}: paginas ${candidate.startPage}-${candidate.endPage}\n${candidate.text.substring(0, MAX_CANDIDATE_TEXT_LENGTH)}`,
         )
         .join('\n\n---\n\n');
 
-      const prompt = `Você é um assistente jurídico especializado em análise de processos judiciais.
-        Sua tarefa é analisar os candidatos abaixo e decidir qual deles é mais provável de ser uma ${tipoPeca}.
-        ${candidateDescriptions}
-        Responda somente com JSON no formato {"index": 0}. Use o índice original do candidato. Caso nenhum candidato seja relevante, responda {"index": -1}.`;
+      const prompt = `
+        Você é um assistente jurídico especializado em classificação de peças processuais brasileiras.
+        Sua tarefa é verificar se algum dos candidatos abaixo é de fato uma ${tipoPeca}.
+        Regras obrigatórias:
+        1. Responda {"index": -1} se nenhum candidato for claramente uma ${tipoPeca}.
+        2. Não escolha candidato apenas por maior score.
+        3. Para ser ${tipoPeca}, o candidato deve conter sinais textuais claros da peça, especialmente no início do documento.
+        4. Se o documento se identifica expressamente como outro tipo de peça, ele não pode ser escolhido.    
+        Candidatos:
+        ${candidateDescriptions}  
+        Responda somente com JSON no formato:
+        {"index": 0}
+        ou
+        {"index": -1}
+      `;
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',

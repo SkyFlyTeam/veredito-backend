@@ -157,7 +157,7 @@ export class ProcessoController {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
-    return this.textSearchPartsService.searchPeticaoInicial(file);
+    return await this.textSearchPartsService.searchPeticaoInicial(file);
   }
 
   @Post('contestacao')
@@ -208,6 +208,108 @@ export class ProcessoController {
       throw new BadRequestException('Arquivo é obrigatório');
     }
 
-    return this.textSearchPartsService.searchContestacao(file);
+    return await this.textSearchPartsService.searchContestacao(file);
+  }
+
+  @Post('sentenca')
+  @HttpCode(201)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/processos/sentenca';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
+          return cb(
+            new BadRequestException(
+              'Apenas arquivos .pdf, .docx e .txt são permitidos',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 300 * 1024 * 1024,
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadPeticaoDto })
+  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Processo jurídico analizado e partes identificadas',
+  })
+  @Roles('superuser', 'juiz')
+  async searchSentenca(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Arquivo é obrigatório');
+    }
+
+    return await this.textSearchPartsService.searchSentenca(file);
+  }
+
+  @Post('recursos')
+  @HttpCode(201)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (req, file, cb) => {
+          const uploadPath = './uploads/processos/sentenca';
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+          cb(null, uploadPath);
+        },
+        filename: (req, file, cb) => {
+          const uniqueSuffix =
+            Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
+          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
+        },
+      }),
+      fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
+          return cb(
+            new BadRequestException(
+              'Apenas arquivos .pdf, .docx e .txt são permitidos',
+            ),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: {
+        fileSize: 300 * 1024 * 1024,
+      },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UploadPeticaoDto })
+  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
+  @ApiResponse({
+    status: 201,
+    description: 'Processo jurídico analizado e partes identificadas',
+  })
+  @Roles('superuser', 'juiz')
+  async searchRecurso(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Arquivo é obrigatório');
+    }
+
+    return await this.textSearchPartsService.searchRecurso(file);
   }
 }
