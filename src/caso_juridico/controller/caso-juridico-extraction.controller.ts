@@ -30,7 +30,6 @@ import { Roles } from '../../account/auth/decorators/roles.decorator';
 import { CasoJuridicoExtractionService } from '../service/caso-juridico-extraction.service';
 import { CasoJuridicoInformations } from '../dto/caso-juridico-informations.dto';
 
-// memoryStorage via require — mesmo padrão do diskStorage já usado no projeto
 const { memoryStorage } = require('multer');
 
 @ApiTags('Caso Jurídico — Extração de Documentos')
@@ -42,18 +41,12 @@ export class CasoJuridicoExtractionController {
     private readonly extractionService: CasoJuridicoExtractionService,
   ) {}
 
-  /**
-   * POST /caso-juridico/extrair-documentos
-   *
-   * Aceita múltiplos arquivos (PDF, DOCX, TXT) e retorna os fatos estruturados
-   * e fundamentos jurídicos extraídos via GPT-4o.
-   */
   @Post('extrair-documentos')
   @Roles('advogado', 'juiz', 'superuser')
   @HttpCode(200)
   @UseInterceptors(
     FilesInterceptor('files', 20, {
-      storage: memoryStorage(), // mantém em memória — não salva em disco
+      storage: memoryStorage(),
       fileFilter: (_req: any, file: any, cb: any) => {
         if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
           return cb(
@@ -67,7 +60,7 @@ export class CasoJuridicoExtractionController {
         cb(null, true);
       },
       limits: {
-        fileSize: 50 * 1024 * 1024, // 50 MB por arquivo
+        fileSize: 50 * 1024 * 1024,
         files: 20,
       },
     }),
