@@ -11,6 +11,7 @@ import {
   Controller,
   HttpCode,
   Post,
+  Body,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -71,6 +72,11 @@ export class CasoJuridicoExtractionController {
     schema: {
       type: 'object',
       properties: {
+        contexto_fatico_fundamentos: {
+          type: 'string',
+          description:
+            'Contexto fático e fundamentos jurídicos',
+        },
         files: {
           type: 'array',
           items: { type: 'string', format: 'binary' },
@@ -100,6 +106,7 @@ export class CasoJuridicoExtractionController {
   })
   async extrairDocumentos(
     @UploadedFiles() files: any[],
+    @Body('contexto_fatico_fundamentos') contexto_fatico_fundamentos: string,
   ): Promise<CasoJuridicoInformations> {
     if (!files || files.length === 0) {
       throw new BadRequestException(
@@ -107,6 +114,9 @@ export class CasoJuridicoExtractionController {
       );
     }
 
-    return this.extractionService.extractFromDocuments(files);
+    return this.extractionService.extractFromDocuments(
+      files,
+      contexto_fatico_fundamentos,
+    );
   }
 }
