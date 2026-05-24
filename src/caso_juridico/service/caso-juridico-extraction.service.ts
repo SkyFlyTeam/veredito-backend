@@ -1,9 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   Injectable,
@@ -11,15 +5,10 @@ import {
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import OpenAI from 'openai';
 import { WordProcessingService } from '../../peticao/pipeline-services/word_processing/word-processing.service';
 import { CasoJuridicoInformations } from '../dto/caso-juridico-informations.dto';
 
-// OpenAI usa require() pelo mesmo motivo do pdf-parse: evita problemas de
-// resolução de tipos em projetos com moduleResolution mais restrito.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const OpenAI = require('openai').default ?? require('openai');
-
-/** Resposta bruta esperada do modelo */
 interface GptExtractionResponse {
   fatosEstruturados: string;
   fundamentosJuridicos: string;
@@ -28,9 +17,8 @@ interface GptExtractionResponse {
 @Injectable()
 export class CasoJuridicoExtractionService {
   private readonly logger = new Logger(CasoJuridicoExtractionService.name);
-  private readonly openai: any;
+  private readonly openai: OpenAI;
 
-  // Limites de parágrafo definidos nos critérios de aceitação
   private readonly MIN_PARAGRAPHS = 1;
   private readonly MAX_PARAGRAPHS = 5;
 
@@ -43,13 +31,6 @@ export class CasoJuridicoExtractionService {
     });
   }
 
-  /**
-   * Recebe múltiplos arquivos (PDF, DOCX ou TXT), extrai o texto de cada um,
-   * concatena e envia ao GPT-4o para identificar fatos estruturados e fundamentos jurídicos.
-   *
-   * @param files - Array de arquivos recebidos pelo Multer
-   * @returns CasoJuridicoInformations com fatos e fundamentos extraídos
-   */
   async extractFromDocuments(files: any[]): Promise<CasoJuridicoInformations> {
     if (!files || files.length === 0) {
       throw new BadRequestException(
@@ -57,7 +38,6 @@ export class CasoJuridicoExtractionService {
       );
     }
 
-    // ── Passo 1: extrair texto de cada arquivo ───────────────────────────────
     const textsWithSource: string[] = [];
 
     for (const file of files) {
@@ -71,7 +51,6 @@ export class CasoJuridicoExtractionService {
           continue;
         }
 
-        // Inclui separador identificando a origem para ajudar o modelo a correlacionar documentos
         textsWithSource.push(
           `=== DOCUMENTO: ${file.originalname} ===\n${text.trim()}`,
         );
@@ -79,7 +58,6 @@ export class CasoJuridicoExtractionService {
           `Texto extraído de "${file.originalname}" (${text.length} caracteres).`,
         );
       } catch (err) {
-        // Arquivo inválido ou não suportado — ignora e loga
         const message = err instanceof Error ? err.message : String(err);
         this.logger.warn(`Arquivo "${file.originalname}" ignorado: ${message}`);
       }
@@ -92,9 +70,6 @@ export class CasoJuridicoExtractionService {
       );
     }
 
-    // ── Passo 2: montar o corpus textual ────────────────────────────────────
-    // GPT-4o suporta ~128k tokens; limitamos a 80.000 caracteres (~60k tokens)
-    // para garantir espaço de resposta adequado.
     const MAX_CORPUS_CHARS = 80_000;
     const corpus = textsWithSource.join('\n\n').substring(0, MAX_CORPUS_CHARS);
 
@@ -102,13 +77,8 @@ export class CasoJuridicoExtractionService {
       `Corpus montado com ${textsWithSource.length} documento(s) — ${corpus.length} caracteres.`,
     );
 
-    // ── Passo 3: chamar o GPT-4o ─────────────────────────────────────────────
     return this.callGpt(corpus);
   }
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // Métodos privados
-  // ────────────────────────────────────────────────────────────────────────────
 
   private async callGpt(corpus: string): Promise<CasoJuridicoInformations> {
     const systemPrompt = `Você é um assistente jurídico especializado em análise documental.
@@ -144,9 +114,9 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto 
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: 0.2, // baixa temperatura → respostas mais determinísticas e factuais
+      temperature: 0.2,
       max_tokens: 2048,
-      response_format: { type: 'json_object' }, // força saída JSON puro
+      response_format: { type: 'json_object' },
     });
 
     const rawContent: string = response.choices[0]?.message?.content ?? '';
@@ -154,14 +124,10 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto 
     return this.parseAndValidate(rawContent);
   }
 
-  /**
-   * Faz parse do JSON retornado pelo GPT e valida os campos obrigatórios.
-   */
   private parseAndValidate(raw: string): CasoJuridicoInformations {
     let parsed: GptExtractionResponse;
 
     try {
-      // Remove eventuais blocos markdown caso o modelo ignore a instrução
       const clean = raw.replace(/```json|```/g, '').trim();
       parsed = JSON.parse(clean) as GptExtractionResponse;
     } catch {

@@ -1,9 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-/**
- * Tipo de retorno estruturado do serviço de extração de documentos jurídicos.
- * Contém os fatos estruturados e os fundamentos jurídicos extraídos dos documentos enviados.
- */
 export class CasoJuridicoInformations {
   @ApiProperty({
     description:

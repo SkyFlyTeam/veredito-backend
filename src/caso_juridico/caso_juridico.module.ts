@@ -18,10 +18,7 @@ import { WordProcessingService } from '../peticao/pipeline-services/word_process
       SecoesPeticaoEntity,
     ]),
   ],
-  providers: [
-    CasoJuridicoExtractionService,
-    WordProcessingService, // reutilizado para extração de texto dos arquivos
-  ],
+  providers: [CasoJuridicoExtractionService, WordProcessingService],
   controllers: [CasoJuridicoExtractionController],
   exports: [TypeOrmModule, CasoJuridicoExtractionService],
 })
