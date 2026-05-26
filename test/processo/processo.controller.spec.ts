@@ -20,7 +20,11 @@ describe('ProcessoController', () => {
       delete: jest.fn(),
     };
 
-    controller = new ProcessoController(textService as any, processoService as any);
+    const minutaSentencaService = {
+      gerarMinutaSentenca: jest.fn(),
+    };
+
+    controller = new ProcessoController(textService as any, processoService as any, minutaSentencaService as any);
   });
 
   it('searchPeticao should call text service', async () => {

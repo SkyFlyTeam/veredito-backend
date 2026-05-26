@@ -14,10 +14,13 @@ import {
   ParseIntPipe,
   Post,
   Req,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -37,6 +40,8 @@ import { UploadPeticaoDto } from 'src/peticao/dto/upload-peticao.dto';
 import { CreateProcessoDTO } from '../dtos/processo.dto';
 import { ProcessoService } from '../service/processo.service';
 import { ProcessoResponseDTO } from '../dtos/processo-response.dto';
+import { MinutaSentencaDto } from '../dtos/minuta-sentenca.dto';
+import { MinutaSentencaService } from '../service/minuta-sentenca.service';
 
 const processoFileInterceptorOptions = {
   storage: diskStorage({
@@ -78,7 +83,8 @@ export class ProcessoController {
   constructor(
     private readonly textSearchPartsService: TextSearchPartsService,
     private readonly processoService: ProcessoService,
-  ) {}
+    private readonly minutaSentencaService: MinutaSentencaService,
+  ) { }
 
   @Get()
   @Roles('juiz', 'superuser')
@@ -311,5 +317,26 @@ export class ProcessoController {
     }
 
     return await this.textSearchPartsService.searchRecurso(file);
+  }
+  @Post('minuta-sentenca')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Gerar minuta de sentença em formato DOCX' })
+  @ApiResponse({
+    status: 201,
+    description: 'Documento Word (.docx) gerado com a minuta da sentença',
+  })
+  @Roles('superuser', 'juiz')
+  async gerarMinutaSentenca(
+    @Body() body: MinutaSentencaDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    const buffer = await this.minutaSentencaService.gerarMinutaSentenca(body);
+
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Disposition': 'attachment; filename="minuta_sentenca.docx"',
+    });
+
+    return new StreamableFile(buffer);
   }
 }
