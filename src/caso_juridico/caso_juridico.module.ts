@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { ConfigModule } from '@nestjs/config';
 import { CasoJuridicoEntity } from './entity/caso_juridico.entity';
 import { CasoPrecedenteSugeridoEntity } from './entity/caso_precedente_sugerido.entity';
 import { SecoesPeticaoEntity } from './entity/secoes_peticao.entity';
