@@ -17,10 +17,14 @@ export class CasoJuridicoResponseDto extends DTOInterface {
   @ApiProperty({ example: 'SP' })
   uf: string;
 
-  @ApiPropertyOptional({ example: 'O requerente firmou contrato de trabalho...' })
+  @ApiPropertyOptional({
+    example: 'O requerente firmou contrato de trabalho...',
+  })
   fatos_estruturados?: string;
 
-  @ApiPropertyOptional({ example: 'O caso encontra amparo no art. 186 do CC...' })
+  @ApiPropertyOptional({
+    example: 'O caso encontra amparo no art. 186 do CC...',
+  })
   fundamentos_juridicos?: string;
 
   @ApiPropertyOptional({ example: 1 })
