@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CasoJuridicoEntity } from '../entity/caso_juridico.entity';
-import { CreateCasoJuridicoDto } from '../dto/create-caso-juridico.dto';
+import { CreateCasoJuridicoDto } from '../dto/caso-juridico.dto';
 import { CasoJuridicoResponseDto } from '../dto/caso-juridico-response.dto';
 import { CasoJuridicoExtractionService } from './caso-juridico-extraction.service';
 
@@ -19,21 +19,24 @@ export class CasoJuridicoCrudService {
     files: any[],
     usuarioId: number,
   ): Promise<CasoJuridicoResponseDto> {
-    // Repassa os documentos para o serviço de extração
+    // Monta um contexto sucinto a partir dos campos do DTO e repassa os documentos
+    const contexto = `${dto.area_direito}\nPedidos: ${dto.pedidos_principais}\nTese: ${dto.tese_pretendida}\nUF: ${dto.uf}`;
     const { fatosEstruturados, fundamentosJuridicos } =
-      await this.extractionService.extractFromDocuments(files);
+      await this.extractionService.extractFromDocuments(files, contexto);
 
-    const caso = this.casoRepository.create({
+    const payload: Partial<CasoJuridicoEntity> = {
       area_direito: dto.area_direito,
       pedidos_principais: dto.pedidos_principais,
       tese_pretendida: dto.tese_pretendida,
       uf: dto.uf,
-      tribunalPrecedenteId: dto.tribunalPrecedenteId ?? null,
+      // use undefined instead of null to satisfy the entity partial typing
+      tribunalPrecedenteId: dto.tribunalPrecedenteId ?? undefined,
       fatos_estruturados: fatosEstruturados,
       fundamentos_juridicos: fundamentosJuridicos,
       usuarioId,
-    });
+    };
 
+    const caso = this.casoRepository.create(payload);
     const saved = await this.casoRepository.save(caso);
     return this.mapToResponseDto(saved);
   }
