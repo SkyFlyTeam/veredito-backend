@@ -114,6 +114,17 @@ export class CasoJuridicoExtractionController {
       );
     }
 
+    // Rejeita campo de contexto nulo/undefined/vazio
+    if (contexto_fatico_fundamentos === null || contexto_fatico_fundamentos === undefined || (typeof contexto_fatico_fundamentos === 'string' && contexto_fatico_fundamentos.trim() === '')) {
+      throw new BadRequestException('O campo "contexto_fatico_fundamentos" é obrigatório e não pode ser null/empty.');
+    }
+
+    // Valida cada arquivo: originalname não pode ser null/empty
+    const invalidFile = files.some((f) => !f || !f.originalname || String(f.originalname).trim() === '');
+    if (invalidFile) {
+      throw new BadRequestException('Um ou mais arquivos enviados possuem nome inválido ou estão vazios. Verifique o campo "files".');
+    }
+
     return this.extractionService.extractFromDocuments(
       files,
       contexto_fatico_fundamentos,
