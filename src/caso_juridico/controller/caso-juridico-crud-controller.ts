@@ -29,7 +29,7 @@ import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../account/auth/guards/roles.guard';
 import { Roles } from '../../account/auth/decorators/roles.decorator';
 import { CasoJuridicoCrudService } from '../service/caso-juridico-crud.service';
-import { CreateCasoJuridicoDto } from '../dto/create-caso-juridico.dto';
+import { CreateCasoJuridicoDto } from '../dto/caso-juridico.dto';
 import { CasoJuridicoResponseDto } from '../dto/caso-juridico-response.dto';
 
 const { memoryStorage } = require('multer');
@@ -101,7 +101,7 @@ export class CasoJuridicoCrudController {
       throw new BadRequestException('Envie ao menos um documento no campo "files".');
     }
 
-    const usuarioId = req.user?.sub || req.user?.id;
+    const usuarioId = req.user?.id || req.user?.userId || req.user?.sub;
     if (!usuarioId) {
       throw new BadRequestException('Usuário não autenticado.');
     }
