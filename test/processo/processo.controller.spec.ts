@@ -1,5 +1,11 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
-import { BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
+import * as fs from 'fs';
+
+jest.mock('fs', () => ({
+  ...jest.requireActual('fs') as any,
+  existsSync: jest.fn(),
+}));
 
 import { ProcessoController } from '../../src/processo/controller/processo.controller';
 
@@ -69,5 +75,20 @@ describe('ProcessoController', () => {
 
     await controller.deleteProcesso(3 as any);
     expect(processoService.delete).toHaveBeenCalledWith(3);
+  });
+
+  it('getPdf should throw if file is missing', async () => {
+    processoService.findOne.mockResolvedValue({ id: 1, caminhoArquivo: null });
+    await expect(controller.getPdf(1, {} as any)).rejects.toThrow(NotFoundException);
+  });
+
+  it('getPdf should download file if exists', async () => {
+    processoService.findOne.mockResolvedValue({ id: 1, caminhoArquivo: 'uploads/processos/123-456-Documento_publico.pdf' });
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    const mockRes = { download: jest.fn() };
+
+    await controller.getPdf(1, mockRes as any);
+
+    expect(mockRes.download).toHaveBeenCalledWith(expect.any(String), 'Documento_publico.pdf');
   });
 });

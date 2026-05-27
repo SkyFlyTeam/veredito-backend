@@ -19,8 +19,10 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  NotFoundException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { resolve, basename } from 'node:path';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -28,6 +30,7 @@ import {
   ApiOperation,
   ApiResponse,
   ApiTags,
+  ApiProduces,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/account/auth/guards/roles.guard';
@@ -108,6 +111,44 @@ export class ProcessoController {
   })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<ProcessoResponseDTO> {
     return this.processoService.findOne(id);
+  }
+
+  @Get(':id/pdf')
+  @Roles('juiz', 'superuser')
+  @ApiOperation({ summary: 'Obter o arquivo PDF do processo jurídico pelo ID' })
+  @ApiProduces('application/pdf')
+  @ApiResponse({
+    status: 200,
+    description: 'Arquivo PDF retornado com sucesso',
+    content: {
+      'application/pdf': {
+        schema: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  async getPdf(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: any,
+  ): Promise<void> {
+    const processo = await this.processoService.findOne(id);
+
+    if (!processo.caminhoArquivo) {
+      throw new NotFoundException('Processo não possui arquivo associado');
+    }
+
+    const filePath = resolve(processo.caminhoArquivo);
+
+    if (!existsSync(filePath)) {
+      throw new NotFoundException('Arquivo físico não encontrado');
+    }
+    const baseName = basename(processo.caminhoArquivo);
+    const match = baseName.match(/^\d+-\d+-(.+)$/);
+    const fileName = match ? match[1] : baseName;
+
+    res.download(filePath, fileName);
   }
 
   @Post()
