@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+
+jest.mock('pdf-parse', () => ({
+  PDFParse: jest.fn(),
+}));
+import { NotFoundException } from '@nestjs/common';
 import { PipelineOrchestrator } from '../../../src/peticao/pipeline-services/pipeline_orchestror';
+import { ClassificacaoAderencia } from '../../../src/precedents/enumerator/classificacao-aderencia.enumerator';
 
 function collectEvents(observable: any): Promise<any[]> {
   return new Promise((resolve, reject) => {
@@ -16,73 +22,135 @@ function collectEvents(observable: any): Promise<any[]> {
 describe('PipelineOrchestrator', () => {
   let orchestrator: PipelineOrchestrator;
 
-  let mockWordProcessingService: any;
-  let mockTextProcessingService: any;
-  let mockEmbeddingsService: any;
-  let mockSemanticSearchService: any;
-  let mockPrecedenteSugeridoService: any;
-  let mockSynthesisService: any;
-  let mockSummaryService: any;
-  let mockResumeService: any;
-  let mockPeticaoRepository: any;
+  let mockPersistence: any;
+  let mockExtractFileTextStep: any;
+  let mockGenerateSummaryStep: any;
+  let mockBuildSummaryTextStep: any;
+  let mockGenerateEmbeddingStep: any;
+  let mockSearchPrecedentsStep: any;
+  let mockGenerateSynthesisStep: any;
+
+  const mockSummary = {
+    teseJuridica: 'test thesis',
+    solicitacaoPedido: 'test request',
+  };
+
+  const mockResume =
+    'TESE JURÍDICA:\ntest thesis\n\nSOLICITAÇÃO/PEDIDO:\ntest request';
 
   beforeEach(() => {
-    mockWordProcessingService = {
-      extractTextFromPath: jest.fn(),
+    mockPersistence = {
+      findPeticaoOrFail: jest.fn(),
+      savePeticaoAnalysis: jest.fn(),
+      saveInitialSuggestions: jest.fn(),
+      saveSynthesis: jest.fn(),
     };
 
-    mockTextProcessingService = {
-      process: jest.fn(),
+    mockExtractFileTextStep = {
+      execute: jest.fn(),
     };
 
-    mockEmbeddingsService = {
-      generateEmbedding: jest.fn(),
+    mockGenerateSummaryStep = {
+      execute: jest.fn(),
+      format: jest.fn(),
     };
 
-    mockSemanticSearchService = {
-      searchSimilar: jest.fn(),
+    mockBuildSummaryTextStep = {
+      fromSummary: jest.fn(),
     };
 
-    mockPrecedenteSugeridoService = {
-      createBulk: jest.fn(),
+    mockGenerateEmbeddingStep = {
+      execute: jest.fn(),
     };
 
-    mockSynthesisService = {
-      generateSynthesis: jest.fn(),
+    mockSearchPrecedentsStep = {
+      execute: jest.fn(),
+      getAverageSimilarityScore: jest.fn(),
     };
 
-    mockSummaryService = {
-      summarize: jest.fn(),
-    };
-
-    mockResumeService = {
-      saveResume: jest.fn(),
-    };
-
-    mockPeticaoRepository = {
-      findOne: jest.fn(),
-      save: jest.fn(),
+    mockGenerateSynthesisStep = {
+      execute: jest.fn(),
     };
 
     orchestrator = new PipelineOrchestrator(
-      mockWordProcessingService,
-      mockTextProcessingService,
-      mockEmbeddingsService,
-      mockSemanticSearchService,
-      mockPrecedenteSugeridoService,
-      mockSynthesisService,
-      mockSummaryService,
-      mockResumeService,
-      mockPeticaoRepository,
+      mockPersistence,
+      mockExtractFileTextStep,
+      mockGenerateSummaryStep,
+      mockBuildSummaryTextStep,
+      mockGenerateEmbeddingStep,
+      mockSearchPrecedentsStep,
+      mockGenerateSynthesisStep,
     );
   });
 
+  function arrangeSuccessfulSteps() {
+    const mockPeticao = {
+      id: 1,
+      caminhoArquivo: 'caminho/teste.docx',
+    };
+    const rawText = 'texto bruto de teste';
+    const sourceText = 'test thesis test request';
+    const embedding = [0.1, 0.2, 0.3];
+    const precedents = [
+      { id: 10, numero_registro: '123', score: 0.1, tese: 'tese 1' },
+      { id: 20, numero_registro: '456', score: 0.2, tese: 'tese 2' },
+    ];
+    const syntheses = [
+      {
+        percentual_similaridade: 55,
+        classificacao: ClassificacaoAderencia.APLICAVEL,
+        sintese_explicativa: 'síntese 1',
+        precedente_id: 10,
+        peticao_id: 1,
+        precedente: precedents[0],
+      },
+      {
+        percentual_similaridade: 60,
+        classificacao: ClassificacaoAderencia.NAO_APLICAVEL,
+        sintese_explicativa: 'síntese 2',
+        precedente_id: 20,
+        peticao_id: 1,
+        precedente: precedents[1],
+      },
+    ];
+    const savedSyntheses = [
+      { id: 1, ...syntheses[0] },
+      { id: 2, ...syntheses[1] },
+    ];
+
+    mockPersistence.findPeticaoOrFail.mockResolvedValue(mockPeticao);
+    mockExtractFileTextStep.execute.mockResolvedValue(rawText);
+    mockGenerateSummaryStep.execute.mockResolvedValue(mockSummary);
+    mockGenerateSummaryStep.format.mockReturnValue(mockResume);
+    mockBuildSummaryTextStep.fromSummary.mockReturnValue(sourceText);
+    mockGenerateEmbeddingStep.execute.mockResolvedValue(embedding);
+    mockSearchPrecedentsStep.execute.mockResolvedValue(precedents);
+    mockSearchPrecedentsStep.getAverageSimilarityScore.mockReturnValue(0.15);
+    mockGenerateSynthesisStep.execute
+      .mockResolvedValueOnce(syntheses[0])
+      .mockResolvedValueOnce(syntheses[1]);
+    mockPersistence.saveSynthesis
+      .mockResolvedValueOnce(savedSyntheses[0])
+      .mockResolvedValueOnce(savedSyntheses[1]);
+
+    return {
+      mockPeticao,
+      rawText,
+      sourceText,
+      embedding,
+      precedents,
+      syntheses,
+      savedSyntheses,
+    };
+  }
+
   describe('run', () => {
     it('deve emitir ErrorEvent se a petição não for encontrada', async () => {
-      mockPeticaoRepository.findOne.mockResolvedValueOnce(null);
+      mockPersistence.findPeticaoOrFail.mockRejectedValueOnce(
+        new NotFoundException('Petição com ID 1 não encontrada'),
+      );
 
       const events = await collectEvents(orchestrator.run(1));
-
       const errorEvent = events.find((event) => event.stage === 'error');
 
       expect(errorEvent).toBeDefined();
@@ -90,182 +158,78 @@ describe('PipelineOrchestrator', () => {
       expect(errorEvent.data.message).toContain(
         'Petição com ID 1 não encontrada',
       );
-
-      expect(mockPeticaoRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
+      expect(mockPersistence.findPeticaoOrFail).toHaveBeenCalledWith(1);
+      expect(mockExtractFileTextStep.execute).not.toHaveBeenCalled();
     });
 
     it('deve emitir ErrorEvent se a extração de texto falhar', async () => {
-      mockPeticaoRepository.findOne.mockResolvedValueOnce({
+      mockPersistence.findPeticaoOrFail.mockResolvedValueOnce({
         id: 1,
         caminhoArquivo: 'caminho/teste.docx',
       });
-
-      mockWordProcessingService.extractTextFromPath.mockResolvedValueOnce(null);
+      mockExtractFileTextStep.execute.mockRejectedValueOnce(
+        new Error('Falha ao extrair texto do arquivo da petição.'),
+      );
 
       const events = await collectEvents(orchestrator.run(1));
-
       const errorEvent = events.find((event) => event.stage === 'error');
 
       expect(errorEvent).toBeDefined();
       expect(errorEvent.status).toBe('error');
       expect(errorEvent.data.message).toContain('Falha ao extrair texto');
-
-      expect(mockWordProcessingService.extractTextFromPath).toHaveBeenCalledWith(
+      expect(mockExtractFileTextStep.execute).toHaveBeenCalledWith(
         'caminho/teste.docx',
       );
     });
 
-    it('deve executar o pipeline completo com sucesso', async () => {
-      const mockPeticao = {
-        id: 1,
-        caminhoArquivo: 'caminho/teste.docx',
-      };
-
-      const rawText = 'texto bruto de teste';
-      const processedText = 'texto bruto teste';
-
-      const mockSummary = {
-        teseJuridica: 'test thesis',
-        solicitacaoPedido: 'test request',
-      };
-
-      const mockPeticaoComResumo = {
-        ...mockPeticao,
-        resumo:
-          'TESE JURÍDICA:\ntest thesis\n\nSOLICITAÇÃO/PEDIDO:\ntest request',
-      };
-
-      const mockEmbedding = [0.1, 0.2, 0.3];
-
-      const mockPrecedents = [
-        {
-          id: 10,
-          numero_registro: '123',
-          score: 0.1,
-          tese: 'tese 1',
-        },
-        {
-          id: 20,
-          numero_registro: '456',
-          score: 0.2,
-          tese: 'tese 2',
-        },
-      ];
-
-      const savedSynthesisOne = {
-        id: 1,
-        percentual_similaridade: 55,
-        classificacao: 'aplicável',
-        sintese_explicativa: 'síntese 1',
-        precedente_id: 10,
-        peticao_id: 1,
-      };
-
-      const savedSynthesisTwo = {
-        id: 2,
-        percentual_similaridade: 60,
-        classificacao: 'não aplicável',
-        sintese_explicativa: 'síntese 2',
-        precedente_id: 20,
-        peticao_id: 1,
-      };
-
-      mockPeticaoRepository.findOne.mockResolvedValueOnce(mockPeticao);
-      mockWordProcessingService.extractTextFromPath.mockResolvedValueOnce(
+    it('deve executar o pipeline de petição com resumo, busca e sínteses', async () => {
+      const {
+        mockPeticao,
         rawText,
-      );
-      mockSummaryService.summarize.mockResolvedValueOnce(mockSummary);
-      mockResumeService.saveResume.mockResolvedValueOnce(mockPeticaoComResumo);
-      mockTextProcessingService.process.mockReturnValueOnce(processedText);
-      mockEmbeddingsService.generateEmbedding.mockResolvedValueOnce(
-        mockEmbedding,
-      );
-      mockPeticaoRepository.save.mockResolvedValueOnce(undefined);
-      mockSemanticSearchService.searchSimilar.mockResolvedValueOnce(
-        mockPrecedents,
-      );
-
-      mockPrecedenteSugeridoService.createBulk
-        .mockResolvedValueOnce([])
-        .mockResolvedValueOnce([savedSynthesisOne])
-        .mockResolvedValueOnce([savedSynthesisTwo]);
-
-      mockSynthesisService.generateSynthesis
-        .mockResolvedValueOnce({
-          classificacao: 'aplicável',
-          sintese: 'síntese 1',
-        })
-        .mockResolvedValueOnce({
-          classificacao: 'não aplicável',
-          sintese: 'síntese 2',
-        });
+        sourceText,
+        embedding,
+        precedents,
+        savedSyntheses,
+      } = arrangeSuccessfulSteps();
 
       const events = await collectEvents(orchestrator.run(1));
 
-      expect(mockPeticaoRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
-
-      expect(mockWordProcessingService.extractTextFromPath).toHaveBeenCalledWith(
+      expect(mockPersistence.findPeticaoOrFail).toHaveBeenCalledWith(1);
+      expect(mockExtractFileTextStep.execute).toHaveBeenCalledWith(
         'caminho/teste.docx',
       );
-
-      expect(mockSummaryService.summarize).toHaveBeenCalledWith(rawText);
-
-      expect(mockResumeService.saveResume).toHaveBeenCalledWith(1, mockSummary);
-
-      expect(mockTextProcessingService.process).toHaveBeenCalledWith(rawText);
-
-      expect(mockEmbeddingsService.generateEmbedding).toHaveBeenCalledWith(
-        `${mockSummary.teseJuridica}\n${mockSummary.solicitacaoPedido}`
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 3000),
+      expect(mockGenerateSummaryStep.execute).toHaveBeenCalledWith(rawText);
+      expect(mockGenerateSummaryStep.format).toHaveBeenCalledWith(mockSummary);
+      expect(mockBuildSummaryTextStep.fromSummary).toHaveBeenCalledWith(
+        mockSummary,
       );
-
-      expect(mockPeticaoRepository.save).toHaveBeenCalledWith({
-        ...mockPeticao,
-        teseVetor: mockEmbedding,
-        questaoVetor: mockEmbedding,
-      });
-
-      expect(mockSemanticSearchService.searchSimilar).toHaveBeenCalledWith(
-        mockEmbedding,
+      expect(mockGenerateEmbeddingStep.execute).toHaveBeenCalledWith(
+        sourceText,
+      );
+      expect(mockPersistence.savePeticaoAnalysis).toHaveBeenCalledWith(
+        mockPeticao,
+        mockResume,
+        embedding,
+      );
+      expect(mockSearchPrecedentsStep.execute).toHaveBeenCalledWith(
+        embedding,
         undefined,
       );
-
-      expect(mockPrecedenteSugeridoService.createBulk).toHaveBeenNthCalledWith(
+      expect(mockPersistence.saveInitialSuggestions).toHaveBeenCalledWith(
         1,
-        [
-          {
-            percentual_similaridade: 55,
-            classificacao: 1,
-            sintese_explicativa: '',
-            precedente_id: 10,
-            peticao_id: 1,
-          },
-          {
-            percentual_similaridade: 60,
-            classificacao: 2,
-            sintese_explicativa: '',
-            precedente_id: 20,
-            peticao_id: 1,
-          },
-        ],
+        precedents,
       );
-
-      expect(mockSynthesisService.generateSynthesis).toHaveBeenNthCalledWith(
+      expect(mockGenerateSynthesisStep.execute).toHaveBeenNthCalledWith(
         1,
-        'test thesis\ntest request',
-        'tese 1',
+        sourceText,
+        precedents[0],
+        1,
       );
-
-      expect(mockSynthesisService.generateSynthesis).toHaveBeenNthCalledWith(
+      expect(mockGenerateSynthesisStep.execute).toHaveBeenNthCalledWith(
         2,
-        'test thesis\ntest request',
-        'tese 2',
+        sourceText,
+        precedents[1],
+        1,
       );
 
       const resumoEvent = events.find((event) => event.stage === 'resumo');
@@ -275,22 +239,82 @@ describe('PipelineOrchestrator', () => {
       );
       const completeEvent = events.find((event) => event.stage === 'complete');
 
-      expect(resumoEvent).toBeDefined();
-      expect(resumoEvent.status).toBe('success');
-      expect(resumoEvent.data.resumo).toBe(mockPeticaoComResumo.resumo);
-
-      expect(searchEvent).toBeDefined();
-      expect(searchEvent.status).toBe('success');
-      expect(searchEvent.data.totalFound).toBe(2);
-
+      expect(resumoEvent.data.resumo).toBe(mockResume);
+      expect(searchEvent.data).toMatchObject({
+        precedents,
+        totalFound: 2,
+        averageSimilarityScore: 0.15,
+      });
       expect(synthesisEvents).toHaveLength(2);
-      expect(synthesisEvents[0].data).toEqual(savedSynthesisOne);
-      expect(synthesisEvents[1].data).toEqual(savedSynthesisTwo);
+      expect(synthesisEvents[0].data).toEqual(savedSyntheses[0]);
+      expect(synthesisEvents[1].data).toEqual(savedSyntheses[1]);
+      expect(completeEvent.data).toMatchObject({
+        precedentsProcessed: 2,
+        synthesisGenerated: 2,
+      });
+    });
+  });
 
-      expect(completeEvent).toBeDefined();
-      expect(completeEvent.status).toBe('success');
-      expect(completeEvent.data.precedentsProcessed).toBe(2);
-      expect(completeEvent.data.synthesisGenerated).toBe(2);
+  describe('runProcesso', () => {
+    it('deve emitir apenas synthesis e complete para texto de processo', async () => {
+      const { sourceText, embedding, precedents, syntheses } =
+        arrangeSuccessfulSteps();
+
+      const events = await collectEvents(
+        orchestrator.runProcesso('texto processo'),
+      );
+
+      expect(mockExtractFileTextStep.execute).not.toHaveBeenCalled();
+      expect(mockPersistence.savePeticaoAnalysis).not.toHaveBeenCalled();
+      expect(mockPersistence.saveInitialSuggestions).not.toHaveBeenCalled();
+      expect(mockPersistence.saveSynthesis).not.toHaveBeenCalled();
+      expect(mockGenerateSummaryStep.execute).toHaveBeenCalledWith(
+        'texto processo',
+      );
+      expect(mockGenerateEmbeddingStep.execute).toHaveBeenCalledWith(
+        sourceText,
+      );
+      expect(mockSearchPrecedentsStep.execute).toHaveBeenCalledWith(
+        embedding,
+        undefined,
+      );
+      expect(mockGenerateSynthesisStep.execute).toHaveBeenCalledWith(
+        sourceText,
+        precedents[0],
+        undefined,
+      );
+
+      expect(events.map((event) => event.stage)).toEqual([
+        'synthesis',
+        'synthesis',
+        'complete',
+      ]);
+      expect(events[0].data).toEqual(syntheses[0]);
+    });
+  });
+
+  describe('runCasoJuridico', () => {
+    it('deve emitir synthesis apenas para precedentes aplicáveis', async () => {
+      const { syntheses } = arrangeSuccessfulSteps();
+
+      const events = await collectEvents(
+        orchestrator.runCasoJuridico('texto caso'),
+      );
+      const synthesisEvents = events.filter(
+        (event) => event.stage === 'synthesis',
+      );
+      const completeEvent = events.find((event) => event.stage === 'complete');
+
+      expect(events.map((event) => event.stage)).toEqual([
+        'synthesis',
+        'complete',
+      ]);
+      expect(synthesisEvents).toHaveLength(1);
+      expect(synthesisEvents[0].data).toEqual(syntheses[0]);
+      expect(completeEvent.data).toMatchObject({
+        precedentsProcessed: 2,
+        synthesisGenerated: 1,
+      });
     });
   });
 });
