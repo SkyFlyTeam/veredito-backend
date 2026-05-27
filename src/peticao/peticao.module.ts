@@ -7,8 +7,15 @@ import { PeticaoController } from './controller/peticao.controller';
 import { WordProcessingService } from './pipeline-services/word_processing/word-processing.service';
 import { TextProcessingService } from './pipeline-services/word_processing/text-processing.service';
 import { PipelineOrchestrator } from './pipeline-services/pipeline_orchestror';
+import { PipelinePersistenceService } from './pipeline-services/service/pipeline-persistence.service';
 import { SummaryService } from './pipeline-services/summary/summary.service';
 import { ResumeService } from './pipeline-services/resume/resume.service';
+import { BuildSummaryTextStep } from './pipeline-services/steps/build-summary-text.step';
+import { ExtractFileTextStep } from './pipeline-services/steps/extract-file-text.step';
+import { GenerateEmbeddingStep } from './pipeline-services/steps/generate-embedding.step';
+import { GenerateSummaryStep } from './pipeline-services/steps/generate-summary.step';
+import { GenerateSynthesisStep } from './pipeline-services/steps/generate-synthesis.step';
+import { SearchPrecedentsStep } from './pipeline-services/steps/search-precedents.step';
 import { RunPipelineCommand } from './commands/run-pipeline.command';
 import { RunPipelineBatchCommand } from './commands/run-pipeline-batch.command';
 import { BenchmarkPipelineCommand } from './commands/benchmark-pipeline.command';
@@ -33,6 +40,13 @@ import { SynthesisModule } from '../synthesis/synthesis.module';
     WordProcessingService,
     TextProcessingService,
     PipelineOrchestrator,
+    PipelinePersistenceService,
+    ExtractFileTextStep,
+    GenerateSummaryStep,
+    BuildSummaryTextStep,
+    GenerateEmbeddingStep,
+    SearchPrecedentsStep,
+    GenerateSynthesisStep,
     SummaryService,
     ResumeService,
     RunPipelineCommand,

@@ -1,5 +1,3 @@
-import { PrecedenteSugeridoEntity } from '../../precedents/entity/precedente_sugerido.entity';
-
 export interface PipelineEvent {
   stage: 'search' | 'synthesis' | 'resumo' | 'complete' | 'error';
   status: 'success' | 'error' | 'pending';
@@ -11,7 +9,7 @@ export interface PipelineEvent {
 export interface SearchEvent extends PipelineEvent {
   stage: 'search';
   data: {
-    precedents: PrecedenteSugeridoEntity[];
+    precedents: any[];
     totalFound: number;
     averageSimilarityScore: number;
   };
@@ -19,7 +17,7 @@ export interface SearchEvent extends PipelineEvent {
 
 export interface SynthesisEvent extends PipelineEvent {
   stage: 'synthesis';
-  data: PrecedenteSugeridoEntity;
+  data: any;
 }
 
 export interface ResumoEvent extends PipelineEvent {

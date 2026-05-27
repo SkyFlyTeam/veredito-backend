@@ -2,6 +2,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 jest.setTimeout(60000);
 
+jest.mock('pdf-parse', () => ({
+  PDFParse: jest.fn(),
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { TypeOrmModule, getRepositoryToken } from '@nestjs/typeorm';
@@ -17,10 +21,15 @@ import { SemanticSearchService } from '../../src/peticao/semantic-search/service
 import { PrecedenteSugeridoService } from '../../src/precedents/service/precedente_sugerido.service';
 import { UserEntity } from '../../src/account/user/entity/user.entity';
 import PrecedenteEntity from '../../src/precedents/entity/precedente.entity';
-import { TextProcessingService } from '../../src/peticao/pipeline-services/word_processing/text-processing.service';
 import { SummaryService } from '../../src/peticao/pipeline-services/summary/summary.service';
-import { ResumeService } from '../../src/peticao/pipeline-services/resume/resume.service';
 import { SynthesisService } from '../../src/synthesis/synthesis.service';
+import { PipelinePersistenceService } from '../../src/peticao/pipeline-services/service/pipeline-persistence.service';
+import { BuildSummaryTextStep } from '../../src/peticao/pipeline-services/steps/build-summary-text.step';
+import { ExtractFileTextStep } from '../../src/peticao/pipeline-services/steps/extract-file-text.step';
+import { GenerateEmbeddingStep } from '../../src/peticao/pipeline-services/steps/generate-embedding.step';
+import { GenerateSummaryStep } from '../../src/peticao/pipeline-services/steps/generate-summary.step';
+import { GenerateSynthesisStep } from '../../src/peticao/pipeline-services/steps/generate-synthesis.step';
+import { SearchPrecedentsStep } from '../../src/peticao/pipeline-services/steps/search-precedents.step';
 
 function collectEvents(observable: any): Promise<any[]> {
   return new Promise((resolve, reject) => {
@@ -51,11 +60,11 @@ describe('PipelineOrchestrator (Integration)', () => {
       imports: [
         TypeOrmModule.forRoot({
           type: 'postgres',
-          host: process.env.DB_HOST,
-          port: Number(process.env.DB_PORT),
-          username: process.env.DB_USER,
-          password: process.env.DB_PASSWORD,
-          database: process.env.DB_NAME,
+          host: process.env.DB_HOST ?? 'localhost',
+          port: Number(process.env.DB_PORT ?? 5433),
+          username: process.env.DB_USER ?? 'nestuser',
+          password: process.env.DB_PASSWORD ?? 'nestpassword',
+          database: process.env.DB_NAME ?? 'nestdb_test',
           entities: [__dirname + '/../../src/**/*.entity{.ts,.js}'],
           synchronize: true,
         }),
@@ -68,12 +77,17 @@ describe('PipelineOrchestrator (Integration)', () => {
       ],
       providers: [
         PipelineOrchestrator,
+        PipelinePersistenceService,
         WordProcessingService,
-        TextProcessingService,
+        ExtractFileTextStep,
+        GenerateSummaryStep,
+        BuildSummaryTextStep,
+        GenerateEmbeddingStep,
+        SearchPrecedentsStep,
+        GenerateSynthesisStep,
         SemanticSearchService,
         PrecedenteSugeridoService,
         SummaryService,
-        ResumeService,
         {
           provide: EmbeddingsService,
           useValue: {
@@ -154,12 +168,6 @@ describe('PipelineOrchestrator (Integration)', () => {
       solicitacaoPedido: 'Pedido de teste',
     });
 
-    const resumeService = moduleRef.get(ResumeService);
-    jest.spyOn(resumeService, 'saveResume').mockResolvedValue({
-      ...peticao,
-      resumo: resumoGerado,
-    } as any);
-
     const semanticService = moduleRef.get(SemanticSearchService);
     jest.spyOn(semanticService, 'searchSimilar').mockResolvedValue([
       {
@@ -202,19 +210,24 @@ describe('PipelineOrchestrator (Integration)', () => {
     });
 
     expect(updatedPeticao).toBeDefined();
+    expect(updatedPeticao!.resumo).toBe(resumoGerado);
     expect(updatedPeticao!.teseVetor).toBeTruthy();
     expect(updatedPeticao!.questaoVetor).toBeTruthy();
 
     const precedentesSalvos = await precedenteSugeridoRepository.find({
       where: { peticao: { id: peticao.id } },
       relations: ['peticao'],
+      order: { id: 'ASC' },
     });
 
     expect(precedentesSalvos.length).toBeGreaterThanOrEqual(1);
-
-    expect(precedentesSalvos[0]).toMatchObject({
-      precedenteId: precedent.id,
-      classificacao: 1,
-    });
+    expect(precedentesSalvos).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          precedenteId: precedent.id,
+          classificacao: 1,
+        }),
+      ]),
+    );
   });
 });
