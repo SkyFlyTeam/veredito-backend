@@ -171,7 +171,9 @@ export class PeticaoController {
   @Roles('juiz', 'superuser')
   @Sse()
   @HttpCode(200)
-  @ApiOperation({ summary: 'Analisar petição com filtros de tribunal e espécie' })
+  @ApiOperation({
+    summary: 'Analisar petição com filtros de tribunal e espécie',
+  })
   @ApiBody({ type: AnalisePeticaoDto })
   @ApiResponse({ status: 200, description: 'Stream SSE da análise da petição' })
   analisePeticao(@Body() dto: AnalisePeticaoDto): Observable<MessageEvent> {
