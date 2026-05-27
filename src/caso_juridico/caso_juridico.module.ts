@@ -35,5 +35,3 @@ import { WordProcessingService } from '../peticao/pipeline-services/word_process
   exports: [TypeOrmModule, CasoJuridicoExtractionService],
 })
 export class CasoJuridicoModule {}
-
-
