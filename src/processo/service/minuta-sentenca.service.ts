@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import OpenAI from 'openai';
 import { ConfigService } from '@nestjs/config';
 // @ts-ignore
@@ -23,6 +23,8 @@ export class MinutaSentencaService {
   constructor(
     @InjectRepository(ProcessoJuridicoEntity)
     private readonly processoRepository: Repository<ProcessoJuridicoEntity>,
+    @InjectRepository(PrecedenteSugeridoEntity)
+    private readonly precedenteSugeridoRepository: Repository<PrecedenteSugeridoEntity>,
     private readonly configService: ConfigService,
   ) {
     this.openai = new OpenAI({
@@ -31,7 +33,7 @@ export class MinutaSentencaService {
   }
 
   async gerarMinutaSentenca(dto: MinutaSentencaDto): Promise<Buffer> {
-    const { dispositivo, precedentesSugeridos, processo_id } = dto;
+    const { dispositivo, precedentesSugeridos: precedentes_sugeridos_ids, processo_id } = dto;
 
     const processo = await this.processoRepository.findOne({
       where: { id: processo_id },
@@ -39,6 +41,14 @@ export class MinutaSentencaService {
 
     if (!processo) {
       throw new NotFoundException(`Processo jurídico com ID ${processo_id} não encontrado.`);
+    }
+
+    let precedentesSugeridos: PrecedenteSugeridoEntity[] = [];
+    if (precedentes_sugeridos_ids && precedentes_sugeridos_ids.length > 0) {
+      precedentesSugeridos = await this.precedenteSugeridoRepository.find({
+        where: { id: In(precedentes_sugeridos_ids) },
+        relations: ['precedente', 'precedente.especie'],
+      });
     }
 
     // 1. Chamar LLM para gerar as seções principais da sentença
@@ -101,7 +111,11 @@ export class MinutaSentencaService {
     const pedidos = processo.pedidos || 'Não informado';
     const fundamentos = processo.fundamentos || 'Não informado';
     const precedentesTexto = precedentes
-      ?.map((p, i) => `Precedente ${i + 1}:\nSíntese: ${p.sintese_explicativa}`)
+      ?.map((p) => {
+        const especieNome = p.precedente?.especie?.nome || 'Precedente';
+        const numeroRegistro = p.precedente?.numero_registro || 'Sem número';
+        return `${especieNome} ${numeroRegistro}:\nSíntese: ${p.sintese_explicativa}`;
+      })
       .join('\n\n') || 'Nenhum precedente sugerido.';
 
     const prompt = `Você é um magistrado redigindo uma minuta de sentença. Sua tarefa é produzir os textos para as 3 seções principais do documento: Relatório, Fundamentação e Dispositivo.

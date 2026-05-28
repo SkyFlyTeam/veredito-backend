@@ -9,9 +9,10 @@ export class MinutaSentencaDto {
   @IsNotEmpty()
   dispositivo: string;
 
-  @ApiProperty({ description: 'Lista de precedentes sugeridos e classificados', type: [PrecedenteSugeridoEntity] })
+  @ApiProperty({ description: 'Lista de IDs dos precedentes sugeridos', type: [Number] })
   @IsArray()
-  precedentesSugeridos: PrecedenteSugeridoEntity[];
+  @IsNumber({}, { each: true })
+  precedentesSugeridos: number[];
 
   @ApiProperty({ description: 'O ID do processo associado' })
   @IsNumber()
