@@ -19,9 +19,8 @@ export class CasoJuridicoCrudService {
     files: any[],
     usuarioId: number,
   ): Promise<CasoJuridicoResponseDto> {
-    // Monta um contexto sucinto a partir dos campos do DTO e repassa os documentos
-    const contexto = `${dto.area_direito}\nPedidos: ${dto.pedidos_principais}\nTese: ${dto.tese_pretendida}\nUF: ${dto.uf}`;
-    const { fatosEstruturados, fundamentosJuridicos } =
+    const contexto = `${dto.fatos_estruturados}\n\n${dto.fundamentos_juridicos}`;
+    const { fatos_estruturados, fundamentos_juridicos } =
       await this.extractionService.extractFromDocuments(files, contexto);
 
     const payload: Partial<CasoJuridicoEntity> = {
@@ -29,16 +28,16 @@ export class CasoJuridicoCrudService {
       pedidos_principais: dto.pedidos_principais,
       tese_pretendida: dto.tese_pretendida,
       uf: dto.uf,
-      // use undefined instead of null to satisfy the entity partial typing
-      tribunalPrecedenteId: dto.tribunalPrecedenteId ?? undefined,
-      fatos_estruturados: fatosEstruturados,
-      fundamentos_juridicos: fundamentosJuridicos,
+      tribunalPrecedenteId: dto.tribunalPrecedenteId,
       usuarioId,
     };
 
     const caso = this.casoRepository.create(payload);
     const saved = await this.casoRepository.save(caso);
-    return this.mapToResponseDto(saved);
+    const response = this.mapToResponseDto(saved);
+    response.fatos_estruturados = fatos_estruturados;
+    response.fundamentos_juridicos = fundamentos_juridicos;
+    return response;
   }
 
   async findAll(): Promise<CasoJuridicoResponseDto[]> {
