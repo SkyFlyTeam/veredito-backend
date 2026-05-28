@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { CasoJuridicoCrudService } from '../../src/caso_juridico/service/caso-juridico-crud.service';
 import { NotFoundException } from '@nestjs/common';
 import { CasoJuridicoEntity } from '../../src/caso_juridico/entity/caso_juridico.entity';
@@ -13,7 +14,7 @@ const makeCasoJuridico = (): CasoJuridicoEntity =>
     uf: 'SP',
     fatos_estruturados: 'O requerente firmou contrato de trabalho...',
     fundamentos_juridicos: 'O caso encontra amparo no art. 186 do CC...',
-    tribunalPrecedenteId: null,
+    tribunalPrecedenteId: null as any,
     createdAt: new Date('2024-01-10'),
     usuarioId: 1,
     usuario: null as any,
@@ -27,6 +28,8 @@ const makeDto = () => ({
   pedidos_principais: 'Indenização por danos morais e materiais',
   tese_pretendida: 'Responsabilidade civil do empregador',
   uf: 'SP',
+  fatos_estruturados: 'O contrato foi encerrado sem verbas rescisórias.',
+  fundamentos_juridicos: 'Arts. 477 e 483 da CLT.',
   tribunalPrecedenteId: undefined,
 });
 
@@ -40,15 +43,15 @@ const makeMockFile = (originalname: string): any => ({
 // ── Factories de mock ─────────────────────────────────────────────────────────
 
 const createCasoRepositoryMock = () => ({
-  find: jest.fn(),
-  findOne: jest.fn(),
-  create: jest.fn(),
-  save: jest.fn(),
-  delete: jest.fn(),
+  find: jest.fn() as any,
+  findOne: jest.fn() as any,
+  create: jest.fn() as any,
+  save: jest.fn() as any,
+  delete: jest.fn() as any,
 });
 
 const createExtractionServiceMock = () => ({
-  extractFromDocuments: jest.fn(),
+  extractFromDocuments: jest.fn() as any,
 });
 
 // ── Suite principal ───────────────────────────────────────────────────────────
@@ -79,15 +82,18 @@ describe('CasoJuridicoCrudService', () => {
       const files = [makeMockFile('contrato.pdf')];
 
       extractionService.extractFromDocuments.mockResolvedValue({
-        fatosEstruturados: caso.fatos_estruturados,
-        fundamentosJuridicos: caso.fundamentos_juridicos,
+        fatos_estruturados: caso.fatos_estruturados,
+        fundamentos_juridicos: caso.fundamentos_juridicos,
       });
       casoRepository.create.mockReturnValue(caso);
       casoRepository.save.mockResolvedValue(caso);
 
       const result = await service.create(dto as any, files, 1);
 
-      expect(extractionService.extractFromDocuments).toHaveBeenCalledWith(files, expect.any(String));
+      expect(extractionService.extractFromDocuments).toHaveBeenCalledWith(
+        files,
+        `${dto.fatos_estruturados}\n\n${dto.fundamentos_juridicos}`,
+      );
       expect(casoRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           area_direito: dto.area_direito,
@@ -95,13 +101,14 @@ describe('CasoJuridicoCrudService', () => {
           tese_pretendida: dto.tese_pretendida,
           uf: dto.uf,
           usuarioId: 1,
-          fatos_estruturados: caso.fatos_estruturados,
-          fundamentos_juridicos: caso.fundamentos_juridicos,
         }),
       );
       expect(casoRepository.save).toHaveBeenCalledWith(caso);
       expect(result.id).toBe(caso.id);
       expect(result.area_direito).toBe(caso.area_direito);
+      // campos extraídos não são persistidos, mas devem vir na resposta
+      expect(result.fatos_estruturados).toBe(caso.fatos_estruturados);
+      expect(result.fundamentos_juridicos).toBe(caso.fundamentos_juridicos);
     });
 
     it('deve usar tribunalPrecedenteId quando fornecido', async () => {
@@ -110,8 +117,8 @@ describe('CasoJuridicoCrudService', () => {
       const files = [makeMockFile('contrato.pdf')];
 
       extractionService.extractFromDocuments.mockResolvedValue({
-        fatosEstruturados: 'fatos',
-        fundamentosJuridicos: 'fundamentos',
+        fatos_estruturados: 'fatos',
+        fundamentos_juridicos: 'fundamentos',
       });
       casoRepository.create.mockReturnValue(caso);
       casoRepository.save.mockResolvedValue(caso);

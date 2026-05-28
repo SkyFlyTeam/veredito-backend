@@ -10,10 +10,9 @@ import { toFile } from 'openai/uploads';
 import { CasoJuridicoInformations } from '../dto/caso-juridico-informations.dto';
 
 interface GptExtractionResponse {
-  fatosEstruturados: string;
-  fundamentosJuridicos: string;
+  fatos_estruturados: string;
+  fundamentos_juridicos: string;
 }
-
 
 @Injectable()
 export class CasoJuridicoExtractionService {
@@ -23,15 +22,16 @@ export class CasoJuridicoExtractionService {
   private readonly MIN_PARAGRAPHS = 2;
   private readonly MAX_PARAGRAPHS = 5;
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     });
   }
 
-  async extractFromDocuments(files: any[], contexto_fatico_fundamentos: string): Promise<CasoJuridicoInformations> {
+  async extractFromDocuments(
+    files: any[],
+    contexto_fatico_fundamentos: string,
+  ): Promise<CasoJuridicoInformations> {
     if (!files || files.length === 0) {
       throw new BadRequestException(
         'Nenhum arquivo enviado. Envie ao menos um documento jurídico.',
@@ -92,11 +92,11 @@ export class CasoJuridicoExtractionService {
     const systemPrompt = `Você é um assistente jurídico especializado em análise documental. O caso em questão envolve os seguinte contexto fático e fundamentos jurídicos: ${contexto_fatico_fundamentos}.
 Sua tarefa é analisar documentos jurídicos apresentados e usa-los para complementar o contexto apresentado, gerando no final duas seções obrigatórias:
 
-1. **fatosEstruturados** — Narrativa objetiva e cronológica dos fatos relevantes ao caso.
+1. **fatos_estruturados** — Narrativa objetiva e cronológica dos fatos relevantes ao caso.
    Descreva quem são as partes, o que aconteceu, quando e quais circunstâncias são juridicamente relevantes.
    Baseie-se estritamente fatos apresentados nos documentos e no contexto. Não invente fatos.
 
-2. **fundamentosJuridicos** — Fundamentos legais aplicáveis: artigos de lei, princípios constitucionais,
+2. **fundamentos_juridicos** — Fundamentos legais aplicáveis: artigos de lei, princípios constitucionais,
    súmulas, jurisprudência ou doutrina mencionados ou claramente inferíveis dos documentos e no contexto apresentado.
    Inclua o dispositivo legal e uma breve explicação de sua pertinência ao caso.
 
@@ -108,8 +108,8 @@ Regras de formatação:
 
 Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto fora do JSON:
 {
-  "fatosEstruturados": "...",
-  "fundamentosJuridicos": "..."
+  "fatos_estruturados": "...",
+  "fundamentos_juridicos": "..."
 }`;
 
     const userPrompt =
@@ -173,24 +173,50 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto 
     try {
       const clean = raw.replace(/```json|```/g, '').trim();
       parsed = JSON.parse(clean) as GptExtractionResponse;
-    } catch {
-      this.logger.error(
-        `Falha ao parsear JSON do GPT: ${raw.substring(0, 300)}`,
-      );
-      throw new Error(
-        'O modelo retornou uma resposta em formato inválido. Tente novamente.',
-      );
+    } catch (firstErr) {
+      // Tenta extrair JSON entre first '{' e last '}' caso o modelo tenha incluído texto adicional
+      try {
+        const first = raw.indexOf('{');
+        const last = raw.lastIndexOf('}');
+        if (first !== -1 && last !== -1 && last > first) {
+          const candidate = raw.slice(first, last + 1).replace(/```json|```/g, '').trim();
+          parsed = JSON.parse(candidate) as GptExtractionResponse;
+        } else {
+          throw firstErr;
+        }
+      } catch (secondErr) {
+        // Tentativa final: extrair os campos por regex para casos onde o JSON seja parcial
+        this.logger.error(`Falha ao parsear JSON do GPT (tentativas): ${raw.substring(0, 300)}`);
+        const reFatos = /"fatos(?:_estruturados|Estruturados)"\s*:\s*"([\s\S]*?)"(?:,|\n|\r|$)/i;
+        const reFund = /"fundamentos(?:_juridicos|Juridicos)"\s*:\s*"([\s\S]*?)"(?:,|\n|\r|$)/i;
+        const mF = raw.match(reFatos);
+        const mFu = raw.match(reFund);
+        if (mF && mFu) {
+          parsed = {
+            // @ts-ignore
+            fatos_estruturados: mF[1],
+            // @ts-ignore
+            fundamentos_juridicos: mFu[1],
+          } as unknown as GptExtractionResponse;
+        } else {
+          throw new Error('O modelo retornou uma resposta em formato inválido. Tente novamente.');
+        }
+      }
     }
 
-    if (!parsed.fatosEstruturados || !parsed.fundamentosJuridicos) {
+    // Accept both snake_case and camelCase keys for backward compatibility
+    const fatos = (parsed as any).fatos_estruturados ?? (parsed as any).fatosEstruturados;
+    const fundamentos = (parsed as any).fundamentos_juridicos ?? (parsed as any).fundamentosJuridicos;
+
+    if (!fatos || !fundamentos) {
       throw new Error(
-        'O modelo não retornou os campos obrigatórios (fatosEstruturados / fundamentosJuridicos).',
+        'O modelo não retornou os campos obrigatórios (fatos_estruturados / fundamentos_juridicos).',
       );
     }
 
     return {
-      fatosEstruturados: parsed.fatosEstruturados.trim(),
-      fundamentosJuridicos: parsed.fundamentosJuridicos.trim(),
+      fatos_estruturados: String(fatos).trim(),
+      fundamentos_juridicos: String(fundamentos).trim(),
     };
   }
 }

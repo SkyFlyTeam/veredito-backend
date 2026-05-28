@@ -8,7 +8,7 @@ export class CasoJuridicoInformations {
     example:
       'O requerente firmou contrato de prestação de serviços com a requerida em 10/01/2024...',
   })
-  fatosEstruturados: string;
+  fatos_estruturados!: string;
 
   @ApiProperty({
     description:
@@ -17,5 +17,5 @@ export class CasoJuridicoInformations {
     example:
       'O presente caso encontra amparo no art. 186 do Código Civil, que trata da responsabilidade civil...',
   })
-  fundamentosJuridicos: string;
+  fundamentos_juridicos!: string;
 }
