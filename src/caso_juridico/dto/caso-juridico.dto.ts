@@ -1,5 +1,5 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsNumber, IsString, Length } from 'class-validator';
 import DTOInterface from 'src/interfaces/dto.interface';
 
 export class CreateCasoJuridicoDto extends DTOInterface {
@@ -10,7 +10,7 @@ export class CreateCasoJuridicoDto extends DTOInterface {
   @IsString()
   @IsNotEmpty()
   @Length(1, 100)
-  area_direito: string;
+  area_direito!: string;
 
   @ApiProperty({
     description: 'Pedidos principais do caso',
@@ -18,7 +18,7 @@ export class CreateCasoJuridicoDto extends DTOInterface {
   })
   @IsString()
   @IsNotEmpty()
-  pedidos_principais: string;
+  pedidos_principais!: string;
 
   @ApiProperty({
     description: 'Tese pretendida',
@@ -26,18 +26,34 @@ export class CreateCasoJuridicoDto extends DTOInterface {
   })
   @IsString()
   @IsNotEmpty()
-  tese_pretendida: string;
+  tese_pretendida!: string;
 
   @ApiProperty({ description: 'UF do caso (2 caracteres)', example: 'SP' })
   @IsString()
   @IsNotEmpty()
   @Length(2, 2)
-  uf: string;
+  uf!: string;
 
-  @ApiPropertyOptional({
-    description: 'ID do tribunal precedente (opcional)',
+  @ApiProperty({
+    description: 'Fatos estruturados informados no formulário pelo advogado',
+    example: 'O cliente foi demitido sem pagamento das verbas rescisórias.',
+  })
+  @IsString()
+  @IsNotEmpty()
+  fatos_estruturados!: string;
+
+  @ApiProperty({
+    description: 'Fundamentos jurídicos informados no formulário pelo advogado',
+    example: 'Arts. 477 e 483 da CLT; art. 186 CC.',
+  })
+  @IsString()
+  @IsNotEmpty()
+  fundamentos_juridicos!: string;
+
+  @ApiProperty({
+    description: 'ID do tribunal precedente',
     example: 1,
   })
-  @IsOptional()
-  tribunalPrecedenteId?: number;
+  @IsNumber()
+  tribunalPrecedenteId!: number;
 }
