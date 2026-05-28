@@ -13,6 +13,8 @@ import TipoPecaEntity from './entity/tipo_peca.entity';
 import PecaEntity from './entity/peca.entity';
 import { TipoPecaSeed } from './seed/tipo-peca.seed';
 
+import { PrecedenteSugeridoEntity } from '../precedents/entity/precedente_sugerido.entity';
+
 @Module({
   imports: [
     ConfigModule,
@@ -20,6 +22,7 @@ import { TipoPecaSeed } from './seed/tipo-peca.seed';
       ProcessoJuridicoEntity,
       TipoPecaEntity,
       PecaEntity,
+      PrecedenteSugeridoEntity,
     ]),
     ConfigModule,
   ],
