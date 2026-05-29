@@ -1,15 +1,17 @@
 import {
   Controller,
+  Get,
+  HttpCode,
+  NotFoundException,
   Param,
   ParseIntPipe,
   Post,
+  Res,
   UseGuards,
   BadRequestException,
-  HttpCode,
   Body,
   UploadedFiles,
   UseInterceptors,
-  Get,
   Delete,
   Req,
 } from '@nestjs/common';
@@ -18,11 +20,13 @@ import {
   ApiConsumes,
   ApiBody,
   ApiOperation,
+  ApiProduces,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import type { Response } from 'express';
 import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../account/auth/guards/roles.guard';
 import { Roles } from '../../account/auth/decorators/roles.decorator';
@@ -33,6 +37,7 @@ import { CasoJuridicoCrudService } from '../service/caso-juridico-crud.service';
 import { CreateCasoJuridicoDto } from '../dto/caso-juridico.dto';
 import { CasoJuridicoResponseDto } from '../dto/caso-juridico-response.dto';
 import { SecoesPeticaoEntity } from '../entity/secoes_peticao.entity';
+import { PdfGeneratorService } from '../service/pdf-generator.service';
 
 @ApiTags('Casos Jurídicos')
 @ApiBearerAuth('access-token')
@@ -43,6 +48,7 @@ export class CasoJuridicoController {
     private readonly casoJuridicoService: CasoJuridicoService,
     private readonly extractionService: CasoJuridicoExtractionService,
     private readonly casoJuridicoCrudService: CasoJuridicoCrudService,
+    private readonly pdfGeneratorService: PdfGeneratorService,
   ) {}
 
   @Post()
@@ -317,5 +323,52 @@ export class CasoJuridicoController {
       files,
       contexto_fatico_fundamentos,
     );
+  }
+
+  @Get(':id/download-peticao')
+  @HttpCode(200)
+  @Roles('advogado', 'superuser')
+  @ApiOperation({
+    summary: 'Baixar a minuta de petição inicial como PDF',
+    description: 'Retorna a minuta de petição inicial do caso jurídico formatada em um arquivo PDF pronto para download.',
+  })
+  @ApiProduces('application/pdf')
+  @ApiResponse({
+    status: 200,
+    description: 'Arquivo PDF da petição inicial gerado com sucesso',
+    content: {
+      'application/pdf': {
+        schema: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({ status: 404, description: 'Caso jurídico não encontrado ou sem petição gerada' })
+  async downloadPeticao(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { caso, secoes } = await this.casoJuridicoService.obterSecoesPeticao(id);
+
+    if (!secoes || secoes.length === 0) {
+      throw new NotFoundException(
+        `Nenhuma seção de petição encontrada para o caso ${id}. Gere a petição primeiro via POST /:id/gerar-peticao.`,
+      );
+    }
+
+    const casoInfo = {
+      uf: caso.uf,
+      area_direito: caso.area_direito,
+      tese_pretendida: caso.tese_pretendida,
+    };
+
+    const pdfBuffer = await this.pdfGeneratorService.gerarPeticaoPdf(secoes, casoInfo);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="peticao_caso_${id}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
   }
 }

@@ -84,6 +84,22 @@ export class CasoJuridicoService {
     }
   }
 
+  async obterSecoesPeticao(casoId: number): Promise<{ caso: CasoJuridicoEntity; secoes: SecoesPeticaoEntity[] }> {
+    const caso = await this.casoRepository.findOne({
+      where: { id: casoId },
+    });
+
+    if (!caso) {
+      throw new NotFoundException(`Caso Jurídico com ID ${casoId} não encontrado`);
+    }
+
+    const secoes = await this.secoesPeticaoRepository.find({
+      where: { casoJuridicoId: casoId },
+    });
+
+    return { caso, secoes };
+  }
+
   private construirPrompt(caso: CasoJuridicoEntity): string {
     let prompt = `Você deve redigir as seções de uma petição inicial com base no caso jurídico fornecido.
 As únicas seções obrigatórias são "DOS FATOS" e "DOS PEDIDOS". 
