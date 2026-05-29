@@ -14,6 +14,13 @@ interface GptExtractionResponse {
   fundamentos_juridicos: string;
 }
 
+type ContextoExtracao =
+  | string
+  | {
+      fatos_estruturados: string;
+      fundamentos_juridicos: string;
+    };
+
 @Injectable()
 export class CasoJuridicoExtractionService {
   private readonly logger = new Logger(CasoJuridicoExtractionService.name);
@@ -30,7 +37,7 @@ export class CasoJuridicoExtractionService {
 
   async extractFromDocuments(
     files: any[],
-    contexto_fatico_fundamentos: string,
+    contexto_fatico_fundamentos: ContextoExtracao,
   ): Promise<CasoJuridicoInformations> {
     if (!files || files.length === 0) {
       throw new BadRequestException(
@@ -87,9 +94,14 @@ export class CasoJuridicoExtractionService {
   private async callGpt(
     fileInputs: Array<{ type: 'input_file'; file_id: string }>,
     fileIds: string[],
-    contexto_fatico_fundamentos: string,
+    contexto_fatico_fundamentos: ContextoExtracao,
   ): Promise<CasoJuridicoInformations> {
-    const systemPrompt = `Você é um assistente jurídico especializado em análise documental. O caso em questão envolve os seguinte contexto fático e fundamentos jurídicos: ${contexto_fatico_fundamentos}.
+    const contextoTexto =
+      typeof contexto_fatico_fundamentos === 'string'
+        ? contexto_fatico_fundamentos
+        : `Fatos estruturados informados pelo advogado: ${contexto_fatico_fundamentos.fatos_estruturados}\nFundamentos jurídicos informados pelo advogado: ${contexto_fatico_fundamentos.fundamentos_juridicos}`;
+
+    const systemPrompt = `Você é um assistente jurídico especializado em análise documental. O caso em questão envolve os seguinte contexto fático e fundamentos jurídicos: ${contextoTexto}.
 Sua tarefa é analisar documentos jurídicos apresentados e usa-los para complementar o contexto apresentado, gerando no final duas seções obrigatórias:
 
 1. **fatos_estruturados** — Narrativa objetiva e cronológica dos fatos relevantes ao caso.
