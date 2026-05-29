@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsNotEmpty, IsNumber, IsString, Length } from 'class-validator';
 import DTOInterface from 'src/interfaces/dto.interface';
 
@@ -54,6 +55,7 @@ export class CreateCasoJuridicoDto extends DTOInterface {
     description: 'ID do tribunal precedente',
     example: 1,
   })
+  @Type(() => Number)
   @IsNumber()
   tribunalPrecedenteId!: number;
 }

@@ -92,7 +92,10 @@ describe('CasoJuridicoCrudService', () => {
 
       expect(extractionService.extractFromDocuments).toHaveBeenCalledWith(
         files,
-        `${dto.fatos_estruturados}\n\n${dto.fundamentos_juridicos}`,
+        {
+          fatos_estruturados: dto.fatos_estruturados,
+          fundamentos_juridicos: dto.fundamentos_juridicos,
+        },
       );
       expect(casoRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
