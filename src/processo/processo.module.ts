@@ -11,7 +11,6 @@ import ProcessoJuridicoEntity from './entity/processo_juridico.entity';
 import TipoPecaEntity from './entity/tipo_peca.entity';
 import PecaEntity from './entity/peca.entity';
 import { TipoPecaSeed } from './seed/tipo-peca.seed';
-
 import { PrecedenteSugeridoEntity } from '../precedents/entity/precedente_sugerido.entity';
 
 @Module({
@@ -29,4 +28,3 @@ import { PrecedenteSugeridoEntity } from '../precedents/entity/precedente_sugeri
   exports: [TextSearchPartsService, ProcessoService, ProcessInformationService, MinutaSentencaService],
 })
 export class ProcessoModule { }
-

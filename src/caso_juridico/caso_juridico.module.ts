@@ -8,6 +8,7 @@ import { CasoJuridicoExtractionService } from './service/caso-juridico-extractio
 import { CasoJuridicoCrudService } from './service/caso-juridico-crud.service';
 import { CasoJuridicoService } from './service/caso-juridico.service';
 import { CasoJuridicoController } from './controller/caso-juridico.controller';
+import { PdfGeneratorService } from './service/pdf-generator.service';
 import { WordProcessingService } from '../peticao/pipeline-services/word_processing/word-processing.service';
 
 @Module({
@@ -23,9 +24,10 @@ import { WordProcessingService } from '../peticao/pipeline-services/word_process
     CasoJuridicoExtractionService,
     CasoJuridicoCrudService,
     CasoJuridicoService,
+    PdfGeneratorService,
     WordProcessingService,
   ],
   controllers: [CasoJuridicoController],
-  exports: [TypeOrmModule, CasoJuridicoExtractionService],
+  exports: [TypeOrmModule, CasoJuridicoExtractionService, CasoJuridicoService],
 })
 export class CasoJuridicoModule {}
