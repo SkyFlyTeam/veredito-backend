@@ -81,8 +81,7 @@ export class CasoJuridicoController {
         'pedidos_principais',
         'tese_pretendida',
         'uf',
-        'fatos_estruturados',
-        'fundamentos_juridicos',
+        'contexto_fatico_fundamentos',
         'tribunalPrecedenteId',
         'files',
       ],
@@ -103,14 +102,10 @@ export class CasoJuridicoController {
           type: 'string',
           example: 'SP',
         },
-        fatos_estruturados: {
+        contexto_fatico_fundamentos: {
           type: 'string',
           example:
-            'O contrato de trabalho foi rescindido sem pagamento das verbas rescisórias.',
-        },
-        fundamentos_juridicos: {
-          type: 'string',
-          example: 'Arts. 477 e 483 da CLT; art. 186 CC.',
+            'O contrato de trabalho foi rescindido sem pagamento das verbas rescisórias. Arts. 477 e 483 da CLT; art. 186 CC.',
         },
         tribunalPrecedenteId: {
           type: 'number',
@@ -127,7 +122,7 @@ export class CasoJuridicoController {
     summary: 'Criar novo caso jurídico',
     description:
       'Recebe os dados do caso e até 3 documentos jurídicos (PDF, DOCX ou TXT). ' +
-      'Os documentos são processados pelo serviço de extração junto com os fatos e fundamentos informados pelo advogado para gerar os fatos ' +
+      'Os documentos são processados pelo serviço de extração junto com o contexto fático e fundamentos informados pelo advogado para gerar os fatos ' +
       'estruturados e fundamentos jurídicos automaticamente.',
   })
   @ApiResponse({
