@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { PipelineEvent } from '../../peticao/dto/pipeline-event.dto';
+import { FiltrosDto } from '../../peticao/dto/filtros.dto';
 import ProcessoJuridicoEntity from '../entity/processo_juridico.entity';
 import { PipelineOrchestrator } from '../../peticao/pipeline-services/pipeline_orchestror';
 import { ProcessoPipelineStage } from './enums/processo-pipeline-stage.enum';
@@ -29,9 +30,13 @@ export class ProcessoPipelineOrchestrator {
     private readonly peticaoPipeline: PipelineOrchestrator,
   ) {}
 
-  run(processoId: number): Observable<ProcessoPipelineEvent> {
-    return this.stream(async () =>
-      this.persistence.findProcessoOrFail(processoId),
+  run(
+    processoId: number,
+    filtros?: FiltrosDto,
+  ): Observable<ProcessoPipelineEvent> {
+    return this.stream(
+      async () => this.persistence.findProcessoOrFail(processoId),
+      filtros,
     );
   }
 
@@ -47,7 +52,10 @@ export class ProcessoPipelineOrchestrator {
     );
   }
 
-  private stream(resolveProcesso: () => Promise<ProcessoJuridicoEntity>) {
+  private stream(
+    resolveProcesso: () => Promise<ProcessoJuridicoEntity>,
+    filtros?: FiltrosDto,
+  ) {
     return new Observable<ProcessoPipelineEvent>((observer) => {
       const pipelineStart = Date.now();
 
@@ -123,7 +131,7 @@ export class ProcessoPipelineOrchestrator {
             },
           } as ProcessoPecasEvent);
 
-          await this.forwardPeticaoAnalysis(rawText, observer);
+          await this.forwardPeticaoAnalysis(rawText, observer, filtros);
           observer.complete();
         } catch (error) {
           emitError(error);
@@ -142,9 +150,10 @@ export class ProcessoPipelineOrchestrator {
   private forwardPeticaoAnalysis(
     rawText: string,
     observer: { next: (event: ProcessoPipelineEvent) => void },
+    filtros?: FiltrosDto,
   ): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.peticaoPipeline.runProcesso(rawText, undefined, true).subscribe({
+      this.peticaoPipeline.runProcesso(rawText, filtros, true).subscribe({
         next: (event: PipelineEvent) => {
           if (event.stage === 'search' || event.stage === 'synthesis') {
             observer.next(event);
