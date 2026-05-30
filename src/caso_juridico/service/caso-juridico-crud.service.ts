@@ -31,14 +31,14 @@ export class CasoJuridicoCrudService {
       tese_pretendida: dto.tese_pretendida,
       uf: dto.uf,
       tribunalPrecedenteId: dto.tribunalPrecedenteId,
+      fatos_estruturados: fatos_estruturados,
+      fundamentos_juridicos: fundamentos_juridicos,
       usuarioId,
     };
 
     const caso = this.casoRepository.create(payload);
     const saved = await this.casoRepository.save(caso);
     const response = this.mapToResponseDto(saved);
-    response.fatos_estruturados = fatos_estruturados;
-    response.fundamentos_juridicos = fundamentos_juridicos;
     return response;
   }
 
