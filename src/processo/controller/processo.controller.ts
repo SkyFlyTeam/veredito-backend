@@ -43,6 +43,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { CreateProcessoDTO } from '../dtos/processo.dto';
+import { AnaliseProcessoDto } from '../dtos/analise-processo.dto';
 import { ProcessoService } from '../service/processo.service';
 import { ProcessoResponseDTO } from '../dtos/processo-response.dto';
 import { MinutaSentencaDto } from '../dtos/minuta-sentenca.dto';
@@ -118,19 +119,21 @@ export class ProcessoController {
     return this.processoService.findOne(id);
   }
 
-  @Get(':id/stream')
+  @Post(':id/stream')
   @Roles('juiz', 'superuser')
   @Sse()
   @HttpCode(200)
   @ApiOperation({ summary: 'Analisar processo jurídico com stream SSE' })
+  @ApiBody({ type: AnaliseProcessoDto })
   @ApiResponse({
     status: 200,
     description: 'Stream SSE da análise do processo jurídico',
   })
   streamPipeline(
     @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AnaliseProcessoDto,
   ): Observable<MessageEvent> {
-    return this.processoPipelineOrchestrator.run(id).pipe(
+    return this.processoPipelineOrchestrator.run(id, dto?.filtros).pipe(
       map(
         (event: ProcessoPipelineEvent) =>
           ({

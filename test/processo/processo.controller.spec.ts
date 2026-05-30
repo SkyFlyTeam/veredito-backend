@@ -106,9 +106,13 @@ describe('ProcessoController', () => {
 
     processoPipelineOrchestrator.run.mockReturnValue(of(pipelineEvent));
 
-    const events = await collectEvents(controller.streamPipeline(12));
+    const filtros = { tribunais: [1], especies: [2] };
 
-    expect(processoPipelineOrchestrator.run).toHaveBeenCalledWith(12);
+    const events = await collectEvents(
+      controller.streamPipeline(12, { filtros }),
+    );
+
+    expect(processoPipelineOrchestrator.run).toHaveBeenCalledWith(12, filtros);
     expect(events).toHaveLength(1);
     expect(events[0]).toEqual({
       type: 'generalInfo',
