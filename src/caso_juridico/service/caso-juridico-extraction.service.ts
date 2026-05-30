@@ -14,13 +14,6 @@ interface GptExtractionResponse {
   fundamentos_juridicos: string;
 }
 
-type ContextoExtracao =
-  | string
-  | {
-      fatos_estruturados: string;
-      fundamentos_juridicos: string;
-    };
-
 @Injectable()
 export class CasoJuridicoExtractionService {
   private readonly logger = new Logger(CasoJuridicoExtractionService.name);
@@ -28,16 +21,20 @@ export class CasoJuridicoExtractionService {
 
   private readonly MIN_PARAGRAPHS = 2;
   private readonly MAX_PARAGRAPHS = 5;
+  private readonly MAX_RETRIES = 3;
+  private readonly RETRY_BASE_DELAY_MS = 800;
 
   constructor(private readonly configService: ConfigService) {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+      timeout: 60_000,
+      maxRetries: 2,
     });
   }
 
   async extractFromDocuments(
     files: any[],
-    contexto_fatico_fundamentos: ContextoExtracao,
+    contexto_fatico_fundamentos: string,
   ): Promise<CasoJuridicoInformations> {
     if (!files || files.length === 0) {
       throw new BadRequestException(
@@ -57,12 +54,16 @@ export class CasoJuridicoExtractionService {
           continue;
         }
 
-        const uploaded = await this.openai.files.create({
-          file: await toFile(file.buffer, file.originalname, {
-            type: file.mimetype,
-          }),
-          purpose: 'user_data',
-        });
+        const uploaded = await this.withRetry(
+          async () =>
+            this.openai.files.create({
+              file: await toFile(file.buffer, file.originalname, {
+                type: file.mimetype,
+              }),
+              purpose: 'user_data',
+            }),
+          `upload do arquivo "${file.originalname}"`,
+        );
 
         fileInputs.push({
           type: 'input_file',
@@ -94,12 +95,9 @@ export class CasoJuridicoExtractionService {
   private async callGpt(
     fileInputs: Array<{ type: 'input_file'; file_id: string }>,
     fileIds: string[],
-    contexto_fatico_fundamentos: ContextoExtracao,
+    contexto_fatico_fundamentos: string,
   ): Promise<CasoJuridicoInformations> {
-    const contextoTexto =
-      typeof contexto_fatico_fundamentos === 'string'
-        ? contexto_fatico_fundamentos
-        : `Fatos estruturados informados pelo advogado: ${contexto_fatico_fundamentos.fatos_estruturados}\nFundamentos jurídicos informados pelo advogado: ${contexto_fatico_fundamentos.fundamentos_juridicos}`;
+    const contextoTexto = contexto_fatico_fundamentos;
 
     const systemPrompt = `Você é um assistente jurídico especializado em análise documental. O caso em questão envolve os seguinte contexto fático e fundamentos jurídicos: ${contextoTexto}.
 Sua tarefa é analisar documentos jurídicos apresentados e usa-los para complementar o contexto apresentado, gerando no final duas seções obrigatórias:
@@ -130,24 +128,28 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto 
     this.logger.log('Enviando arquivos ao GPT-4o para extração jurídica...');
 
     try {
-      const response = await this.openai.responses.create({
-        model: 'gpt-4o-mini',
-        input: [
-          {
-            role: 'system',
-            content: [{ type: 'input_text', text: systemPrompt }],
-          },
-          {
-            role: 'user',
-            content: [{ type: 'input_text', text: userPrompt }, ...fileInputs],
-          },
-        ],
-        temperature: 0.2,
-        max_output_tokens: 2048,
-        text: {
-          format: { type: 'json_object' },
-        },
-      });
+      const response = await this.withRetry(
+        () =>
+          this.openai.responses.create({
+            model: 'gpt-4o-mini',
+            input: [
+              {
+                role: 'system',
+                content: [{ type: 'input_text', text: systemPrompt }],
+              },
+              {
+                role: 'user',
+                content: [{ type: 'input_text', text: userPrompt }, ...fileInputs],
+              },
+            ],
+            temperature: 0.2,
+            max_output_tokens: 2048,
+            text: {
+              format: { type: 'json_object' },
+            },
+          }),
+        'chamada de extração no OpenAI',
+      );
 
       const rawContent: string = response.output_text ?? '';
       this.logger.log('Extração concluída com sucesso.');
@@ -230,5 +232,47 @@ Responda EXCLUSIVAMENTE em JSON válido, sem markdown, sem backticks, sem texto 
       fatos_estruturados: String(fatos).trim(),
       fundamentos_juridicos: String(fundamentos).trim(),
     };
+  }
+
+  private isConnectionError(err: unknown): boolean {
+    const message = (err instanceof Error ? err.message : String(err)).toLowerCase();
+    return (
+      message.includes('connection error') ||
+      message.includes('connect') ||
+      message.includes('econnreset') ||
+      message.includes('etimedout') ||
+      message.includes('enotfound') ||
+      message.includes('eai_again') ||
+      message.includes('fetch failed')
+    );
+  }
+
+  private async withRetry<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+  ): Promise<T> {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= this.MAX_RETRIES; attempt++) {
+      try {
+        return await operation();
+      } catch (err) {
+        lastError = err;
+        const isTransient = this.isConnectionError(err);
+
+        if (!isTransient || attempt === this.MAX_RETRIES) {
+          throw err;
+        }
+
+        const delayMs = this.RETRY_BASE_DELAY_MS * attempt;
+        this.logger.warn(
+          `Falha de conexão em ${operationName} (tentativa ${attempt}/${this.MAX_RETRIES}). ` +
+            `Nova tentativa em ${delayMs}ms.`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    throw lastError;
   }
 }
