@@ -20,8 +20,11 @@ import {
   UseGuards,
   UseInterceptors,
   NotFoundException,
+  Sse,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { resolve, basename } from 'node:path';
 import {
   ApiBearerAuth,
@@ -39,12 +42,13 @@ import { Roles } from 'src/account/auth/decorators/roles.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
-import { UploadPeticaoDto } from 'src/peticao/dto/upload-peticao.dto';
 import { CreateProcessoDTO } from '../dtos/processo.dto';
 import { ProcessoService } from '../service/processo.service';
 import { ProcessoResponseDTO } from '../dtos/processo-response.dto';
 import { MinutaSentencaDto } from '../dtos/minuta-sentenca.dto';
 import { MinutaSentencaService } from '../service/minuta-sentenca.service';
+import { ProcessoPipelineOrchestrator } from '../pipeline-services/processo_pipeline_orchestror';
+import { ProcessoPipelineEvent } from '../pipeline-services/types/processo-pipeline-event.type';
 
 const processoFileInterceptorOptions = {
   storage: diskStorage({
@@ -87,7 +91,8 @@ export class ProcessoController {
     private readonly textSearchPartsService: TextSearchPartsService,
     private readonly processoService: ProcessoService,
     private readonly minutaSentencaService: MinutaSentencaService,
-  ) { }
+    private readonly processoPipelineOrchestrator: ProcessoPipelineOrchestrator,
+  ) {}
 
   @Get()
   @Roles('juiz', 'superuser')
@@ -111,6 +116,30 @@ export class ProcessoController {
   })
   findOne(@Param('id', ParseIntPipe) id: number): Promise<ProcessoResponseDTO> {
     return this.processoService.findOne(id);
+  }
+
+  @Get(':id/stream')
+  @Roles('juiz', 'superuser')
+  @Sse()
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Analisar processo jurídico com stream SSE' })
+  @ApiResponse({
+    status: 200,
+    description: 'Stream SSE da análise do processo jurídico',
+  })
+  streamPipeline(
+    @Param('id', ParseIntPipe) id: number,
+  ): Observable<MessageEvent> {
+    return this.processoPipelineOrchestrator.run(id).pipe(
+      map(
+        (event: ProcessoPipelineEvent) =>
+          ({
+            type: event.stage,
+            data: JSON.stringify(event),
+            retry: 5000,
+          }) as unknown as MessageEvent,
+      ),
+    );
   }
 
   @Get(':id/pdf')
@@ -188,177 +217,6 @@ export class ProcessoController {
     await this.processoService.delete(id);
   }
 
-  @Post('parts')
-  @HttpCode(201)
-  @UseInterceptors(FileInterceptor('file', processoFileInterceptorOptions))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadPeticaoDto })
-  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Processo jurídico analizado e partes identificadas',
-  })
-  @Roles('superuser', 'juiz')
-  async searchPeticao(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('Arquivo é obrigatório');
-    }
-
-    return await this.textSearchPartsService.searchPeticaoInicial(file);
-  }
-
-  @Post('contestacao')
-  @HttpCode(201)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/processos/contestacao';
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
-          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
-          return cb(
-            new BadRequestException(
-              'Apenas arquivos .pdf, .docx e .txt são permitidos',
-            ),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 300 * 1024 * 1024,
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadPeticaoDto })
-  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Processo jurídico analizado e partes identificadas',
-  })
-  @Roles('superuser', 'juiz')
-  async searchContestacao(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('Arquivo é obrigatório');
-    }
-
-    return await this.textSearchPartsService.searchContestacao(file);
-  }
-
-  @Post('sentenca')
-  @HttpCode(201)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/processos/sentenca';
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
-          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
-          return cb(
-            new BadRequestException(
-              'Apenas arquivos .pdf, .docx e .txt são permitidos',
-            ),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 300 * 1024 * 1024,
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadPeticaoDto })
-  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Processo jurídico analizado e partes identificadas',
-  })
-  @Roles('superuser', 'juiz')
-  async searchSentenca(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('Arquivo é obrigatório');
-    }
-
-    return await this.textSearchPartsService.searchSentenca(file);
-  }
-
-  @Post('recursos')
-  @HttpCode(201)
-  @UseInterceptors(
-    FileInterceptor('file', {
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = './uploads/processos/sentenca';
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-          cb(null, uploadPath);
-        },
-        filename: (req, file, cb) => {
-          const uniqueSuffix =
-            Date.now() + '-' + Math.round(Math.random() * 1e9);
-          const sanitizedOriginalName = file.originalname.replace(/\s+/g, '_');
-          cb(null, `${uniqueSuffix}-${sanitizedOriginalName}`);
-        },
-      }),
-      fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(pdf|docx|txt)$/i)) {
-          return cb(
-            new BadRequestException(
-              'Apenas arquivos .pdf, .docx e .txt são permitidos',
-            ),
-            false,
-          );
-        }
-        cb(null, true);
-      },
-      limits: {
-        fileSize: 300 * 1024 * 1024,
-      },
-    }),
-  )
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({ type: UploadPeticaoDto })
-  @ApiOperation({ summary: 'Fazer upload de um processo jurídico' })
-  @ApiResponse({
-    status: 201,
-    description: 'Processo jurídico analizado e partes identificadas',
-  })
-  @Roles('superuser', 'juiz')
-  async searchRecurso(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('Arquivo é obrigatório');
-    }
-
-    return await this.textSearchPartsService.searchRecurso(file);
-  }
   @Post('minuta-sentenca')
   @HttpCode(201)
   @ApiOperation({ summary: 'Gerar minuta de sentença em formato DOCX' })
@@ -374,7 +232,8 @@ export class ProcessoController {
     const buffer = await this.minutaSentencaService.gerarMinutaSentenca(body);
 
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': 'attachment; filename="minuta_sentenca.docx"',
     });
 
