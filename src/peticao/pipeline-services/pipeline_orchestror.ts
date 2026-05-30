@@ -65,11 +65,16 @@ export class PipelineOrchestrator {
   runProcesso(
     rawText: string,
     filtros?: FiltrosDto,
+    emitSearch = false,
   ): Observable<PipelineEvent> {
-    return this.stream(PipelineFlow.PROCESSO, async () => ({
-      rawText,
-      filtros,
-    }));
+    return this.stream(
+      PipelineFlow.PROCESSO,
+      async () => ({
+        rawText,
+        filtros,
+      }),
+      { emitSearch },
+    );
   }
 
   runCasoJuridico(
@@ -85,6 +90,7 @@ export class PipelineOrchestrator {
   private stream(
     flow: PipelineFlow,
     resolveInput: () => Promise<PipelineInput>,
+    options: { emitSearch?: boolean } = {},
   ): Observable<PipelineEvent> {
     return new Observable<PipelineEvent>((observer) => {
       const pipelineStart = Date.now();
@@ -166,6 +172,9 @@ export class PipelineOrchestrator {
               input.peticaoId,
               precedents,
             );
+          }
+
+          if (flow === PipelineFlow.PETICAO || options.emitSearch) {
             observer.next(this.createSearchEvent(precedents, searchStart));
           }
 
