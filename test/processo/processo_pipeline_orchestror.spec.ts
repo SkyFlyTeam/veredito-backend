@@ -162,7 +162,9 @@ describe('ProcessoPipelineOrchestrator', () => {
       synthesisEvent,
     } = arrangeSuccessfulPipeline();
 
-    const events = await collectEvents(orchestrator.run(7));
+    const filtros = { tribunais: [1], especies: [2] };
+
+    const events = await collectEvents(orchestrator.run(7, filtros));
 
     expect(mockPersistence.findProcessoOrFail).toHaveBeenCalledWith(7);
     expect(mockExtractProcessDocumentStep.execute).toHaveBeenCalledWith(
@@ -182,7 +184,7 @@ describe('ProcessoPipelineOrchestrator', () => {
     );
     expect(mockPeticaoPipeline.runProcesso).toHaveBeenCalledWith(
       rawText,
-      undefined,
+      filtros,
       true,
     );
 
