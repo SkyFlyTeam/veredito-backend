@@ -36,20 +36,14 @@ export class CreateCasoJuridicoDto extends DTOInterface {
   uf!: string;
 
   @ApiProperty({
-    description: 'Fatos estruturados informados no formulário pelo advogado',
-    example: 'O cliente foi demitido sem pagamento das verbas rescisórias.',
+    description:
+      'Contexto fático e fundamentos jurídicos informados no formulário pelo advogado',
+    example:
+      'O cliente foi demitido sem pagamento das verbas rescisórias. Arts. 477 e 483 da CLT; art. 186 CC.',
   })
   @IsString()
   @IsNotEmpty()
-  fatos_estruturados!: string;
-
-  @ApiProperty({
-    description: 'Fundamentos jurídicos informados no formulário pelo advogado',
-    example: 'Arts. 477 e 483 da CLT; art. 186 CC.',
-  })
-  @IsString()
-  @IsNotEmpty()
-  fundamentos_juridicos!: string;
+  contexto_fatico_fundamentos!: string;
 
   @ApiProperty({
     description: 'ID do tribunal precedente',

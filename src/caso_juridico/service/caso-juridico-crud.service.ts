@@ -20,10 +20,10 @@ export class CasoJuridicoCrudService {
     usuarioId: number,
   ): Promise<CasoJuridicoResponseDto> {
     const { fatos_estruturados, fundamentos_juridicos } =
-      await this.extractionService.extractFromDocuments(files, {
-        fatos_estruturados: dto.fatos_estruturados,
-        fundamentos_juridicos: dto.fundamentos_juridicos,
-      });
+      await this.extractionService.extractFromDocuments(
+        files,
+        dto.contexto_fatico_fundamentos,
+      );
 
     const payload: Partial<CasoJuridicoEntity> = {
       area_direito: dto.area_direito,

@@ -28,8 +28,8 @@ const makeDto = () => ({
   pedidos_principais: 'Indenização por danos morais e materiais',
   tese_pretendida: 'Responsabilidade civil do empregador',
   uf: 'SP',
-  fatos_estruturados: 'O contrato foi encerrado sem verbas rescisórias.',
-  fundamentos_juridicos: 'Arts. 477 e 483 da CLT.',
+  contexto_fatico_fundamentos:
+    'O contrato foi encerrado sem verbas rescisórias. Arts. 477 e 483 da CLT.',
   tribunalPrecedenteId: undefined,
 });
 
@@ -92,10 +92,7 @@ describe('CasoJuridicoCrudService', () => {
 
       expect(extractionService.extractFromDocuments).toHaveBeenCalledWith(
         files,
-        {
-          fatos_estruturados: dto.fatos_estruturados,
-          fundamentos_juridicos: dto.fundamentos_juridicos,
-        },
+        dto.contexto_fatico_fundamentos,
       );
       expect(casoRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
