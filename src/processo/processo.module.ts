@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ConfigModule } from '@nestjs/config';
 import { ProcessoController } from './controller/processo.controller';
 import { TextSearchPartsService } from './service/text-search-parts.service';
 import { ProcessoService } from './service/processo.service';
@@ -24,7 +23,6 @@ import { PrecedenteSugeridoEntity } from '../precedents/entity/precedente_sugeri
       PecaEntity,
       PrecedenteSugeridoEntity,
     ]),
-    ConfigModule,
   ],
   controllers: [ProcessoController],
   providers: [TextSearchPartsService, ProcessoService, ProcessInformationService, WordProcessingService, TipoPecaSeed, MinutaSentencaService],
