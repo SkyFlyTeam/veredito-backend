@@ -1,18 +1,41 @@
 import { describe, expect, it, jest, beforeEach } from '@jest/globals';
+
+jest.mock('pdf-parse', () => ({
+  PDFParse: jest.fn(),
+}));
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { of } from 'rxjs';
 import * as fs from 'fs';
 
 jest.mock('fs', () => ({
-  ...jest.requireActual('fs') as any,
+  ...(jest.requireActual('fs') as any),
   existsSync: jest.fn(),
 }));
 
+jest.mock('../../src/processo/service/minuta-sentenca.service', () => ({
+  MinutaSentencaService: jest.fn(),
+}));
+
 import { ProcessoController } from '../../src/processo/controller/processo.controller';
+
+function collectEvents(observable: any): Promise<any[]> {
+  return new Promise((resolve, reject) => {
+    const events: any[] = [];
+
+    observable.subscribe({
+      next: (event: any) => events.push(event),
+      error: reject,
+      complete: () => resolve(events),
+    });
+  });
+}
 
 describe('ProcessoController', () => {
   let controller: ProcessoController;
   let textService: any;
   let processoService: any;
+  let minutaSentencaService: any;
+  let processoPipelineOrchestrator: any;
 
   beforeEach(() => {
     textService = {
@@ -26,40 +49,72 @@ describe('ProcessoController', () => {
       delete: jest.fn(),
     };
 
-    const minutaSentencaService = {
+    minutaSentencaService = {
       gerarMinutaSentenca: jest.fn(),
     };
 
-    controller = new ProcessoController(textService as any, processoService as any, minutaSentencaService as any);
-  });
+    processoPipelineOrchestrator = {
+      run: jest.fn(),
+    };
 
-  it('searchPeticao should call text service', async () => {
-    const file = { originalname: 'p.pdf' } as Express.Multer.File;
-    textService.searchPeticaoInicial.mockResolvedValue({ ok: true });
-
-    const res = await controller.searchPeticao(file);
-
-    expect(textService.searchPeticaoInicial).toHaveBeenCalledWith(file);
-    expect(res).toEqual({ ok: true });
+    controller = new ProcessoController(
+      textService as any,
+      processoService as any,
+      minutaSentencaService as any,
+      processoPipelineOrchestrator as any,
+    );
   });
 
   it('createProcesso should require file and user', async () => {
     await expect(
-      controller.createProcesso(undefined as any, { user: null } as any, {} as any),
+      controller.createProcesso(
+        undefined as any,
+        { user: null } as any,
+        {} as any,
+      ),
     ).rejects.toThrow(BadRequestException);
   });
 
   it('createProcesso should call service.create', async () => {
     const file = { path: 'uploads/processos/f.pdf' } as Express.Multer.File;
     const req = { user: { id: 7 } } as any;
-    const body = { instancia: 1, classe_processual: 'C', area_direito: 'A', tribunal_precedente: 2 } as any;
+    const body = {
+      instancia: 1,
+      classe_processual: 'C',
+      area_direito: 'A',
+      tribunal_precedente: 2,
+    } as any;
 
     processoService.create.mockResolvedValue({ id: 99 });
 
     const res = await controller.createProcesso(file, req, body);
 
-    expect(processoService.create).toHaveBeenCalledWith({ ...body, file: file.path }, 7);
+    expect(processoService.create).toHaveBeenCalledWith(
+      { ...body, file: file.path },
+      7,
+    );
     expect(res).toMatchObject({ id: 99 });
+  });
+
+  it('streamPipeline should call processo pipeline and map SSE events', async () => {
+    const pipelineEvent = {
+      stage: 'generalInfo',
+      status: 'success',
+      timestamp: new Date('2026-05-29T12:00:00.000Z'),
+      data: { processo: { id: 12 } },
+    };
+
+    processoPipelineOrchestrator.run.mockReturnValue(of(pipelineEvent));
+
+    const events = await collectEvents(controller.streamPipeline(12));
+
+    expect(processoPipelineOrchestrator.run).toHaveBeenCalledWith(12);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toEqual({
+      type: 'generalInfo',
+      data: JSON.stringify(pipelineEvent),
+      retry: 5000,
+    });
   });
 
   it('findAll/findOne/delete should proxy to service', async () => {
@@ -79,16 +134,24 @@ describe('ProcessoController', () => {
 
   it('getPdf should throw if file is missing', async () => {
     processoService.findOne.mockResolvedValue({ id: 1, caminhoArquivo: null });
-    await expect(controller.getPdf(1, {} as any)).rejects.toThrow(NotFoundException);
+    await expect(controller.getPdf(1, {} as any)).rejects.toThrow(
+      NotFoundException,
+    );
   });
 
   it('getPdf should download file if exists', async () => {
-    processoService.findOne.mockResolvedValue({ id: 1, caminhoArquivo: 'uploads/processos/123-456-Documento_publico.pdf' });
+    processoService.findOne.mockResolvedValue({
+      id: 1,
+      caminhoArquivo: 'uploads/processos/123-456-Documento_publico.pdf',
+    });
     (fs.existsSync as jest.Mock).mockReturnValue(true);
     const mockRes = { download: jest.fn() };
 
     await controller.getPdf(1, mockRes as any);
 
-    expect(mockRes.download).toHaveBeenCalledWith(expect.any(String), 'Documento_publico.pdf');
+    expect(mockRes.download).toHaveBeenCalledWith(
+      expect.any(String),
+      'Documento_publico.pdf',
+    );
   });
 });
