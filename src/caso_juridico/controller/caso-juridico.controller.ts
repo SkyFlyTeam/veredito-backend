@@ -9,6 +9,7 @@ import {
   NotFoundException,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Res,
   UseGuards,
@@ -48,6 +49,7 @@ import { AnaliseCasoJuridicoDto } from '../dto/analise-caso-juridico.dto';
 import { PdfGeneratorService } from '../service/pdf-generator.service';
 import { CasoJuridicoPipelineOrchestrator } from '../pipeline-services/caso_juridico_pipeline_orchestror';
 import { CasoJuridicoPipelineEvent } from '../pipeline-services/types/caso-juridico-pipeline-event.type';
+import { UpdateSecaoPeticaoDto } from '../dto/update-secao-peticao.dto';
 
 @ApiTags('Casos Jurídicos')
 @ApiBearerAuth('access-token')
@@ -263,6 +265,31 @@ export class CasoJuridicoController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<SecoesPeticaoEntity[]> {
     return this.casoJuridicoService.gerarPeticaoInicial(id);
+  }
+
+  @Patch(':id/:secaoId')
+  @Roles('advogado', 'superuser')
+  @ApiOperation({
+    summary: 'Editar o conteudo de uma secao da peticao',
+    description:
+      'Atualiza o conteudo de uma secao de peticao vinculada ao caso juridico.',
+  })
+  @ApiBody({ type: UpdateSecaoPeticaoDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Secao atualizada com sucesso',
+    type: SecoesPeticaoEntity,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Caso juridico ou secao nao encontrada',
+  })
+  async atualizarSecaoPeticao(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('secaoId', ParseIntPipe) secaoId: number,
+    @Body() dto: UpdateSecaoPeticaoDto,
+  ): Promise<SecoesPeticaoEntity> {
+    return this.casoJuridicoService.updateSecaoPeticao(id, secaoId, dto);
   }
 
   @Post('extrair-documentos')

@@ -1,10 +1,16 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { CasoJuridicoEntity } from '../entity/caso_juridico.entity';
 import { SecoesPeticaoEntity } from '../entity/secoes_peticao.entity';
+import { UpdateSecaoPeticaoDto } from '../dto/update-secao-peticao.dto';
 
 @Injectable()
 export class CasoJuridicoService {
@@ -98,6 +104,31 @@ export class CasoJuridicoService {
     });
 
     return { caso, secoes };
+  }
+
+  async updateSecaoPeticao(
+    casoId: number,
+    secaoId: number,
+    dto: UpdateSecaoPeticaoDto,
+  ): Promise<SecoesPeticaoEntity> {
+    if (!dto?.conteudo || dto.conteudo.trim() === '') {
+      throw new BadRequestException(
+        'O campo "conteudo" e obrigatorio e nao pode ser vazio.',
+      );
+    }
+
+    const secao = await this.secoesPeticaoRepository.findOne({
+      where: { id: secaoId, casoJuridicoId: casoId },
+    });
+
+    if (!secao) {
+      throw new NotFoundException(
+        `Secao de peticao ${secaoId} nao encontrada para o caso ${casoId}.`,
+      );
+    }
+
+    secao.conteudo = dto.conteudo;
+    return this.secoesPeticaoRepository.save(secao);
   }
 
   private construirPrompt(caso: CasoJuridicoEntity): string {
