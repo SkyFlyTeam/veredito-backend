@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -14,6 +18,7 @@ import {
   UseInterceptors,
   Delete,
   Req,
+  Sse,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -27,6 +32,8 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { JwtAuthGuard } from '../../account/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../account/auth/guards/roles.guard';
 import { Roles } from '../../account/auth/decorators/roles.decorator';
@@ -37,7 +44,10 @@ import { CasoJuridicoCrudService } from '../service/caso-juridico-crud.service';
 import { CreateCasoJuridicoDto } from '../dto/caso-juridico.dto';
 import { CasoJuridicoResponseDto } from '../dto/caso-juridico-response.dto';
 import { SecoesPeticaoEntity } from '../entity/secoes_peticao.entity';
+import { AnaliseCasoJuridicoDto } from '../dto/analise-caso-juridico.dto';
 import { PdfGeneratorService } from '../service/pdf-generator.service';
+import { CasoJuridicoPipelineOrchestrator } from '../pipeline-services/caso_juridico_pipeline_orchestror';
+import { CasoJuridicoPipelineEvent } from '../pipeline-services/types/caso-juridico-pipeline-event.type';
 
 @ApiTags('Casos Jurídicos')
 @ApiBearerAuth('access-token')
@@ -49,10 +59,11 @@ export class CasoJuridicoController {
     private readonly extractionService: CasoJuridicoExtractionService,
     private readonly casoJuridicoCrudService: CasoJuridicoCrudService,
     private readonly pdfGeneratorService: PdfGeneratorService,
+    private readonly casoJuridicoPipelineOrchestrator: CasoJuridicoPipelineOrchestrator,
   ) {}
 
   @Post()
-  @Roles('advogado')
+  @Roles('advogado', 'superuser')
   @HttpCode(201)
   @UseInterceptors(
     FilesInterceptor('files', 3, {
@@ -170,6 +181,32 @@ export class CasoJuridicoController {
   })
   findAll(): Promise<CasoJuridicoResponseDto[]> {
     return this.casoJuridicoCrudService.findAll();
+  }
+
+  @Post(':id/stream')
+  @Roles('advogado', 'superuser')
+  @Sse()
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Analisar caso jurídico com stream SSE' })
+  @ApiBody({ type: AnaliseCasoJuridicoDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Stream SSE da análise do caso jurídico',
+  })
+  streamPipeline(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: AnaliseCasoJuridicoDto,
+  ): Observable<MessageEvent> {
+    return this.casoJuridicoPipelineOrchestrator.run(id, dto?.filtros).pipe(
+      map(
+        (event: CasoJuridicoPipelineEvent) =>
+          ({
+            type: event.stage,
+            data: JSON.stringify(event),
+            retry: 5000,
+          }) as unknown as MessageEvent,
+      ),
+    );
   }
 
   @Get(':id')
@@ -330,7 +367,8 @@ export class CasoJuridicoController {
   @Roles('advogado', 'superuser')
   @ApiOperation({
     summary: 'Baixar a minuta de petição inicial como PDF',
-    description: 'Retorna a minuta de petição inicial do caso jurídico formatada em um arquivo PDF pronto para download.',
+    description:
+      'Retorna a minuta de petição inicial do caso jurídico formatada em um arquivo PDF pronto para download.',
   })
   @ApiProduces('application/pdf')
   @ApiResponse({
@@ -342,12 +380,16 @@ export class CasoJuridicoController {
       },
     },
   })
-  @ApiResponse({ status: 404, description: 'Caso jurídico não encontrado ou sem petição gerada' })
+  @ApiResponse({
+    status: 404,
+    description: 'Caso jurídico não encontrado ou sem petição gerada',
+  })
   async downloadPeticao(
     @Param('id', ParseIntPipe) id: number,
     @Res() res: Response,
   ): Promise<void> {
-    const { caso, secoes } = await this.casoJuridicoService.obterSecoesPeticao(id);
+    const { caso, secoes } =
+      await this.casoJuridicoService.obterSecoesPeticao(id);
 
     if (!secoes || secoes.length === 0) {
       throw new NotFoundException(
@@ -361,7 +403,10 @@ export class CasoJuridicoController {
       tese_pretendida: caso.tese_pretendida,
     };
 
-    const pdfBuffer = await this.pdfGeneratorService.gerarPeticaoPdf(secoes, casoInfo);
+    const pdfBuffer = await this.pdfGeneratorService.gerarPeticaoPdf(
+      secoes,
+      casoInfo,
+    );
 
     res.set({
       'Content-Type': 'application/pdf',
