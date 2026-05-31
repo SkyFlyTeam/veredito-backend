@@ -80,11 +80,16 @@ export class PipelineOrchestrator {
   runCasoJuridico(
     rawText: string,
     filtros?: FiltrosDto,
+    emitSearch = false,
   ): Observable<PipelineEvent> {
-    return this.stream(PipelineFlow.CASO_JURIDICO, async () => ({
-      rawText,
-      filtros,
-    }));
+    return this.stream(
+      PipelineFlow.CASO_JURIDICO,
+      async () => ({
+        rawText,
+        filtros,
+      }),
+      { emitSearch },
+    );
   }
 
   private stream(
