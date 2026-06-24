@@ -55,6 +55,7 @@ describe('ProcessoController', () => {
 
     processoPipelineOrchestrator = {
       run: jest.fn(),
+      replayProcessoAnalysis: jest.fn(),
     };
 
     controller = new ProcessoController(
@@ -105,12 +106,15 @@ describe('ProcessoController', () => {
     };
 
     processoPipelineOrchestrator.run.mockReturnValue(of(pipelineEvent));
+    processoService.findOne.mockResolvedValue({
+      id: 12,
+      caminhoArquivo: 'uploads/processos/processo-comum.pdf',
+    });
 
     const filtros = { tribunais: [1], especies: [2] };
 
-    const events = await collectEvents(
-      controller.streamPipeline(12, { filtros }),
-    );
+    const stream = await controller.streamPipeline(12, { filtros });
+    const events = await collectEvents(stream);
 
     expect(processoPipelineOrchestrator.run).toHaveBeenCalledWith(12, filtros);
     expect(events).toHaveLength(1);
@@ -119,6 +123,37 @@ describe('ProcessoController', () => {
       data: JSON.stringify(pipelineEvent),
       retry: 5000,
     });
+  });
+
+  it('streamPipeline should replay the configured analyzed process for the mock file', async () => {
+    const pipelineEvent = {
+      stage: 'pecas',
+      status: 'success',
+      timestamp: new Date('2026-05-29T12:00:00.000Z'),
+      data: { pieces: [], totalFound: 0 },
+    };
+
+    processoService.findOne.mockResolvedValue({
+      id: 12,
+      caminhoArquivo: 'uploads/processos/Documento_publico.pdf',
+    });
+    processoService.getMockedResponseForDocumentoPublico = jest
+      .fn()
+      .mockResolvedValue({ id: 44 });
+    processoPipelineOrchestrator.replayProcessoAnalysis.mockReturnValue(
+      of(pipelineEvent),
+    );
+
+    const stream = await controller.streamPipeline(12, {});
+    const events = await collectEvents(stream);
+
+    expect(
+      processoService.getMockedResponseForDocumentoPublico,
+    ).toHaveBeenCalled();
+    expect(
+      processoPipelineOrchestrator.replayProcessoAnalysis,
+    ).toHaveBeenCalledWith(44);
+    expect(events[0].type).toBe('pecas');
   });
 
   it('findAll/findOne/delete should proxy to service', async () => {

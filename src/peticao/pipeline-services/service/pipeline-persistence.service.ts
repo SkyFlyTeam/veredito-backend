@@ -8,6 +8,7 @@ import {
   PipelinePrecedentMatch,
   PipelineSynthesisResult,
 } from '../types/pipeline-types';
+import { PrecedenteSugeridoEntity } from '../../../precedents/entity/precedente_sugerido.entity';
 
 @Injectable()
 export class PipelinePersistenceService {
@@ -27,6 +28,17 @@ export class PipelinePersistenceService {
     }
 
     return peticao;
+  }
+
+  async findPeticaoAnalysisOrFail(peticaoId: number): Promise<{
+    peticao: PeticaoEntity;
+    suggestions: PrecedenteSugeridoEntity[];
+  }> {
+    const peticao = await this.findPeticaoOrFail(peticaoId);
+    const suggestions =
+      await this.precedenteSugeridoService.findByPeticao(peticaoId);
+
+    return { peticao, suggestions };
   }
 
   async savePeticaoAnalysis(

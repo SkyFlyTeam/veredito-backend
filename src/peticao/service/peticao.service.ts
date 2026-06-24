@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { unlink } from 'node:fs/promises';
@@ -138,6 +142,28 @@ export class PeticaoService {
 
       throw error;
     }
+  }
+
+  async getMockedResponseForAcaoPopularCompetenciaOriginaria(): Promise<PeticaoResponseDTO> {
+    const mockedPeticaoId = Number(process.env.MOCKED_PETICAO_ID);
+
+    if (!Number.isSafeInteger(mockedPeticaoId) || mockedPeticaoId <= 0) {
+      throw new BadRequestException(
+        'MOCKED_PETICAO_ID deve conter o ID válido de uma petição já analisada',
+      );
+    }
+
+    const existingPeticao = await this.peticaoRepository.findOne({
+      where: { id: mockedPeticaoId },
+    });
+
+    if (!existingPeticao) {
+      throw new NotFoundException(
+        `Petição de mock com ID ${mockedPeticaoId} não encontrada`,
+      );
+    }
+
+    return this.mapToResponseDTO(existingPeticao);
   }
 
   private mapToResponseDTO(peticao: PeticaoEntity): PeticaoResponseDTO {

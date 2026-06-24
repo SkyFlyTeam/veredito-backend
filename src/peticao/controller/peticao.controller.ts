@@ -176,8 +176,32 @@ export class PeticaoController {
   })
   @ApiBody({ type: AnalisePeticaoDto })
   @ApiResponse({ status: 200, description: 'Stream SSE da análise da petição' })
-  analisePeticao(@Body() dto: AnalisePeticaoDto): Observable<MessageEvent> {
-    return this.orchestrator.run(dto.peticao_id, dto.filtros).pipe(
+  async analisePeticao(
+    @Body() dto: AnalisePeticaoDto,
+  ): Promise<Observable<MessageEvent>> {
+    const peticao = await this.peticaoService.findOne(dto.peticao_id);
+
+    console.log('Petição encontrada:', peticao.caminhoArquivo);
+
+    if (peticao.caminhoArquivo.includes('TJES_IRDR_85')) {
+      console.log('Utilizando resposta mockada para Ação Popular Competência Originária');
+      const mockedPeticao =
+        await this.peticaoService.getMockedResponseForAcaoPopularCompetenciaOriginaria();
+
+      return this.toSseEvents(
+        this.orchestrator.replayPeticaoAnalysis(mockedPeticao.id),
+      );
+    }
+
+    return this.toSseEvents(
+      this.orchestrator.run(dto.peticao_id, dto.filtros),
+    );
+  }
+
+  private toSseEvents(
+    events: Observable<PipelineEvent>,
+  ): Observable<MessageEvent> {
+    return events.pipe(
       map(
         (event: PipelineEvent) =>
           ({

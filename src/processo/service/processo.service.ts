@@ -47,6 +47,18 @@ export class ProcessoService {
     return this.mapToResponseDTO(processo);
   }
 
+  async getMockedResponseForDocumentoPublico(): Promise<ProcessoResponseDTO> {
+    const mockedProcessoId = Number(process.env.MOCKED_PROCESSO_ID);
+
+    if (!Number.isSafeInteger(mockedProcessoId) || mockedProcessoId <= 0) {
+      throw new BadRequestException(
+        'MOCKED_PROCESSO_ID deve conter o ID válido de um processo já analisado',
+      );
+    }
+
+    return this.findOne(mockedProcessoId);
+  }
+
   async create(
     data: Partial<CreateProcessoDTO> & { file: string },
     usuarioId: number,

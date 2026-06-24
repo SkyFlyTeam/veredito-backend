@@ -129,11 +129,35 @@ export class ProcessoController {
     status: 200,
     description: 'Stream SSE da análise do processo jurídico',
   })
-  streamPipeline(
+  async streamPipeline(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: AnaliseProcessoDto,
+  ): Promise<Observable<MessageEvent>> {
+    const processo = await this.processoService.findOne(id);
+
+    console.log('Processo caminhoArquivo:', processo.caminhoArquivo);
+
+    if (processo.caminhoArquivo.includes('Documento_p')) {
+      console.log('Utilizando resposta mockada para Documento Público');
+      const mockedProcesso =
+        await this.processoService.getMockedResponseForDocumentoPublico();
+
+      return this.toSseEvents(
+        this.processoPipelineOrchestrator.replayProcessoAnalysis(
+          mockedProcesso.id,
+        ),
+      );
+    }
+
+    return this.toSseEvents(
+      this.processoPipelineOrchestrator.run(id, dto?.filtros),
+    );
+  }
+
+  private toSseEvents(
+    events: Observable<ProcessoPipelineEvent>,
   ): Observable<MessageEvent> {
-    return this.processoPipelineOrchestrator.run(id, dto?.filtros).pipe(
+    return events.pipe(
       map(
         (event: ProcessoPipelineEvent) =>
           ({

@@ -16,6 +16,7 @@ import { BuildProcessPiecesStep } from './steps/build-process-pieces.step';
 import { ExtractProcessDocumentStep } from './steps/extract-process-document.step';
 import { ExtractProcessGeneralInfoStep } from './steps/extract-process-general-info.step';
 import { SearchProcessPiecesStep } from './steps/search-process-pieces.step';
+import { TipoPecaEnumerator } from '../enumerator/tipo-peca.enumerator';
 
 @Injectable()
 export class ProcessoPipelineOrchestrator {
@@ -38,6 +39,76 @@ export class ProcessoPipelineOrchestrator {
       async () => this.persistence.findProcessoOrFail(processoId),
       filtros,
     );
+  }
+
+  replayProcessoAnalysis(
+    processoId: number,
+  ): Observable<ProcessoPipelineEvent> {
+    return new Observable<ProcessoPipelineEvent>((observer) => {
+      const pipelineStart = Date.now();
+
+      const execute = async () => {
+        try {
+          const processo =
+            await this.persistence.findProcessoWithPieces(processoId);
+
+          const information = {
+            fatos: processo.fatos,
+            pedidos: processo.pedidos,
+            fundamentosJuridicos: processo.fundamentos,
+          };
+          const pieces = [...(processo.pecas ?? [])]
+            .sort((left, right) => left.pagina_inicial - right.pagina_inicial)
+            .map((piece, index, allPieces) => ({
+              type: piece.tipo_peca.nome as TipoPecaEnumerator,
+              name: piece.nome,
+              startPage: piece.pagina_inicial,
+              endPage: allPieces[index + 1]
+                ? allPieces[index + 1].pagina_inicial - 1
+                : undefined,
+              score: undefined,
+              text: '',
+            }));
+
+          observer.next({
+            stage: ProcessoPipelineStage.GENERAL_INFO,
+            status: 'success',
+            timestamp: new Date(),
+            duration: Date.now() - pipelineStart,
+            data: { information, processo },
+          } as ProcessoGeneralInfoEvent);
+
+          observer.next({
+            stage: ProcessoPipelineStage.PECAS,
+            status: 'success',
+            timestamp: new Date(),
+            duration: Date.now() - pipelineStart,
+            data: {
+              pieces,
+              totalFound: pieces.length,
+            },
+          } as ProcessoPecasEvent);
+
+          const rawText = await this.extractProcessDocumentStep.execute(
+            processo.caminho_arquivo,
+          );
+
+          await this.forwardPeticaoAnalysis(rawText, observer);
+          observer.complete();
+        } catch (error) {
+          this.emitReplayError(error, pipelineStart, observer);
+          observer.complete();
+        }
+      };
+
+      void execute();
+
+      return () => {
+        this.logger.log(
+          '[PROCESSO PIPELINE] Cliente desconectou do replay do stream',
+        );
+      };
+    });
   }
 
   runFromFile(
@@ -162,6 +233,53 @@ export class ProcessoPipelineOrchestrator {
         error: reject,
         complete: resolve,
       });
+    });
+  }
+
+  private forwardPeticaoReplay(
+    peticaoId: number,
+    observer: { next: (event: ProcessoPipelineEvent) => void },
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.peticaoPipeline.replayPeticaoAnalysis(peticaoId).subscribe({
+        next: (event: PipelineEvent) => {
+          if (event.stage === 'search' || event.stage === 'synthesis') {
+            observer.next(event);
+          } else if (event.stage === 'error') {
+            reject(new Error(event.data.message));
+          }
+        },
+        error: reject,
+        complete: resolve,
+      });
+    });
+  }
+
+  private emitReplayError(
+    error: unknown,
+    pipelineStart: number,
+    observer: { next: (event: ProcessoPipelineEvent) => void },
+  ): void {
+    const message =
+      error instanceof Error ? error.message : 'Erro desconhecido';
+
+    this.logger.error(
+      `[PROCESSO PIPELINE REPLAY] ${message}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+
+    observer.next({
+      stage: 'error',
+      status: 'error',
+      timestamp: new Date(),
+      duration: Date.now() - pipelineStart,
+      data: {
+        failedStage: 'unknown',
+        message,
+        errorCode: 'PROCESSO_PIPELINE_ERROR',
+        recoverable: false,
+        suggestedAction: 'Verifique os logs do backend.',
+      },
     });
   }
 }

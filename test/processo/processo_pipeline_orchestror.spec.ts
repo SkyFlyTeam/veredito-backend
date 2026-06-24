@@ -37,6 +37,7 @@ describe('ProcessoPipelineOrchestrator', () => {
       createProcesso: jest.fn(),
       savePieces: jest.fn(),
       updateGeneralInfo: jest.fn(),
+      findProcessoWithPieces: jest.fn(),
     };
 
     mockExtractProcessDocumentStep = {
@@ -57,6 +58,7 @@ describe('ProcessoPipelineOrchestrator', () => {
 
     mockPeticaoPipeline = {
       runProcesso: jest.fn(),
+      replayPeticaoAnalysis: jest.fn(),
     };
 
     orchestrator = new ProcessoPipelineOrchestrator(
@@ -255,5 +257,58 @@ describe('ProcessoPipelineOrchestrator', () => {
       },
     });
     expect(mockExtractProcessDocumentStep.execute).not.toHaveBeenCalled();
+  });
+
+  it('replayProcessoAnalysis should rebuild persisted process events and replay its petition analysis', async () => {
+    const processo = {
+      id: 7,
+      fatos: 'fatos persistidos',
+      pedidos: 'pedidos persistidos',
+      fundamentos: 'fundamentos persistidos',
+      peticao: { id: 21 },
+      pecas: [
+        {
+          nome: TipoPecaEnumerator.PETICAO_INICIAL,
+          pagina_inicial: 1,
+          tipo_peca: { nome: TipoPecaEnumerator.PETICAO_INICIAL },
+        },
+        {
+          nome: TipoPecaEnumerator.CONTESTACAO,
+          pagina_inicial: 5,
+          tipo_peca: { nome: TipoPecaEnumerator.CONTESTACAO },
+        },
+      ],
+    };
+    const searchEvent = {
+      stage: 'search',
+      status: 'success',
+      timestamp: new Date(),
+      data: { precedents: [], totalFound: 0 },
+    };
+    const synthesisEvent = {
+      stage: 'synthesis',
+      status: 'success',
+      timestamp: new Date(),
+      data: { precedente_id: 10 },
+    };
+
+    mockPersistence.findProcessoWithPieces.mockResolvedValue(processo);
+    mockPeticaoPipeline.replayPeticaoAnalysis.mockReturnValue(
+      of(searchEvent, synthesisEvent),
+    );
+
+    const events = await collectEvents(
+      orchestrator.replayProcessoAnalysis(7),
+    );
+
+    expect(mockPersistence.findProcessoWithPieces).toHaveBeenCalledWith(7);
+    expect(mockPeticaoPipeline.replayPeticaoAnalysis).toHaveBeenCalledWith(21);
+    expect(events.map((event) => event.stage)).toEqual([
+      ProcessoPipelineStage.GENERAL_INFO,
+      ProcessoPipelineStage.PECAS,
+      'search',
+      'synthesis',
+    ]);
+    expect(events[1].data.pieces[0].endPage).toBe(4);
   });
 });

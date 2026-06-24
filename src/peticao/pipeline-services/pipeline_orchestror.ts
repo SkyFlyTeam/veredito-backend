@@ -25,6 +25,7 @@ import { GenerateEmbeddingStep } from './steps/generate-embedding.step';
 import { GenerateSummaryStep } from './steps/generate-summary.step';
 import { GenerateSynthesisStep } from './steps/generate-synthesis.step';
 import { SearchPrecedentsStep } from './steps/search-precedents.step';
+import { PrecedenteSugeridoEntity } from '../../precedents/entity/precedente_sugerido.entity';
 
 @Injectable()
 export class PipelineOrchestrator {
@@ -42,6 +43,93 @@ export class PipelineOrchestrator {
 
   run(peticaoId: number, filtros?: FiltrosDto): Observable<PipelineEvent> {
     return this.runPeticao(peticaoId, filtros);
+  }
+
+  replayPeticaoAnalysis(peticaoId: number): Observable<PipelineEvent> {
+    return new Observable<PipelineEvent>((observer) => {
+      const pipelineStart = Date.now();
+
+      const execute = async () => {
+        try {
+          const { peticao, suggestions } =
+            await this.persistence.findPeticaoAnalysisOrFail(peticaoId);
+
+          if (!peticao.resumo?.trim()) {
+            throw new Error(
+              `A petição de mock com ID ${peticaoId} ainda não foi analisada.`,
+            );
+          }
+
+          const searchSuggestions = suggestions.filter(
+            (suggestion) => !suggestion.sintese_explicativa?.trim(),
+          );
+          const synthesisSuggestions = suggestions.filter((suggestion) =>
+            Boolean(suggestion.sintese_explicativa?.trim()),
+          );
+          const searchSource =
+            searchSuggestions.length > 0 ? searchSuggestions : suggestions;
+          const precedents = this.toReplayPrecedents(searchSource);
+          const precedentOrder = new Map(
+            precedents.map((precedent, index) => [precedent.id, index]),
+          );
+          synthesisSuggestions.sort(
+            (left, right) =>
+              (precedentOrder.get(left.precedenteId) ??
+                Number.MAX_SAFE_INTEGER) -
+              (precedentOrder.get(right.precedenteId) ??
+                Number.MAX_SAFE_INTEGER),
+          );
+
+          // putting timeout to simulate the time taken for each step in the pipeline
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
+          observer.next(this.createResumoEvent(peticao.resumo, pipelineStart));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          observer.next(this.createSearchEvent(precedents, Date.now()));
+
+          for (const suggestion of synthesisSuggestions) {
+            const synthesisStart = Date.now();
+            observer.next({
+              stage: 'synthesis',
+              status: 'success',
+              timestamp: new Date(),
+              duration: Date.now() - synthesisStart,
+              data: this.toReplaySynthesis(suggestion),
+            } as SynthesisEvent);
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+
+          observer.next(
+            this.createCompleteEvent(
+              pipelineStart,
+              precedents.length,
+              synthesisSuggestions.length,
+            ),
+          );
+          observer.complete();
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : 'Erro desconhecido';
+
+          observer.next({
+            stage: 'error',
+            status: 'error',
+            timestamp: new Date(),
+            duration: Date.now() - pipelineStart,
+            data: {
+              failedStage: 'unknown',
+              message,
+              errorCode: 'PIPELINE_STREAM_ERROR',
+              recoverable: false,
+              suggestedAction: 'Verifique os logs do backend.',
+            },
+          });
+          observer.complete();
+        }
+      };
+
+      void execute();
+    });
   }
 
   runPeticao(
@@ -286,6 +374,58 @@ export class PipelineOrchestrator {
         averageSimilarityScore:
           this.searchPrecedentsStep.getAverageSimilarityScore(precedents),
       },
+    };
+  }
+
+  private toReplayPrecedents(
+    suggestions: PrecedenteSugeridoEntity[],
+  ): PipelinePrecedentMatch[] {
+    const precedents = new Map<number, PipelinePrecedentMatch>();
+
+    for (const suggestion of suggestions) {
+      const precedent = suggestion.precedente;
+      if (!precedent || precedents.has(precedent.id)) {
+        continue;
+      }
+
+      precedents.set(precedent.id, {
+        id: precedent.id,
+        numero_registro: precedent.numero_registro,
+        tese: precedent.tese,
+        questao: precedent.questao,
+        ultima_atualizacao: precedent.ultima_atualizacao,
+        status_id: precedent.status?.id,
+        tribunal_id: precedent.tribunal?.id,
+        especie_id: precedent.especie?.id,
+        status_nome: precedent.status?.nome,
+        tribunal_nome: precedent.tribunal?.nome,
+        tribunal_sigla: precedent.tribunal?.sigla,
+        especie_nome: precedent.especie?.nome,
+        especie_sigla: precedent.especie?.sigla,
+        score: this.fromSimilarityPercentage(
+          suggestion.percentual_similaridade,
+        ),
+      });
+    }
+
+    return [...precedents.values()];
+  }
+
+  private fromSimilarityPercentage(percentage: number): number {
+    return Number(((Number(percentage) / 100) * 2 - 1).toFixed(6));
+  }
+
+  private toReplaySynthesis(suggestion: PrecedenteSugeridoEntity) {
+    return {
+      id: suggestion.id,
+      percentual_similaridade: suggestion.percentual_similaridade,
+      classificacao: suggestion.classificacao,
+      sintese_explicativa: suggestion.sintese_explicativa,
+      precedenteId: suggestion.precedenteId,
+      peticaoId: suggestion.peticaoId,
+      createdAt: suggestion.createdAt,
+      precedente: { id: suggestion.precedenteId },
+      peticao: { id: suggestion.peticaoId },
     };
   }
 
