@@ -195,11 +195,24 @@ export class CasoJuridicoController {
     status: 200,
     description: 'Stream SSE da análise do caso jurídico',
   })
-  streamPipeline(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: AnaliseCasoJuridicoDto,
+  async streamPipeline(
+    @Param('id', ParseIntPipe) _id: number,
+    @Body() _dto: AnaliseCasoJuridicoDto,
+  ): Promise<Observable<MessageEvent>> {
+    const mockedCasoJuridico =
+      await this.casoJuridicoService.getMockedResponseForCasoJuridico();
+
+    return this.toSseEvents(
+      this.casoJuridicoPipelineOrchestrator.replayCasoJuridicoAnalysis(
+        mockedCasoJuridico.id,
+      ),
+    );
+  }
+
+  private toSseEvents(
+    events: Observable<CasoJuridicoPipelineEvent>,
   ): Observable<MessageEvent> {
-    return this.casoJuridicoPipelineOrchestrator.run(id, dto?.filtros).pipe(
+    return events.pipe(
       map(
         (event: CasoJuridicoPipelineEvent) =>
           ({

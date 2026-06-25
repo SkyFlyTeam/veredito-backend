@@ -8,6 +8,7 @@ import OpenAI from 'openai';
 import { CasoJuridicoService } from '../../src/caso_juridico/service/caso-juridico.service';
 import { CasoJuridicoEntity } from '../../src/caso_juridico/entity/caso_juridico.entity';
 import { SecoesPeticaoEntity } from '../../src/caso_juridico/entity/secoes_peticao.entity';
+import { CasoPrecedenteSugeridoEntity } from '../../src/caso_juridico/entity/caso_precedente_sugerido.entity';
 
 jest.mock('openai');
 
@@ -15,6 +16,7 @@ describe('CasoJuridicoService', () => {
   let service: CasoJuridicoService;
   let casoRepositoryMock: jest.Mocked<Repository<CasoJuridicoEntity>>;
   let secoesPeticaoRepositoryMock: jest.Mocked<Repository<SecoesPeticaoEntity>>;
+  let casoPrecedenteSugeridoRepositoryMock: jest.Mocked<Repository<CasoPrecedenteSugeridoEntity>>;
   let openaiMock: any;
 
   beforeEach(async () => {
@@ -56,6 +58,11 @@ describe('CasoJuridicoService', () => {
       create: jest.fn(),
       save: jest.fn(),
       delete: jest.fn(),
+      find: jest.fn(),
+    } as any;
+
+    casoPrecedenteSugeridoRepositoryMock = {
+      find: jest.fn(),
     } as any;
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,6 +75,10 @@ describe('CasoJuridicoService', () => {
         {
           provide: getRepositoryToken(SecoesPeticaoEntity),
           useValue: secoesPeticaoRepositoryMock,
+        },
+        {
+          provide: getRepositoryToken(CasoPrecedenteSugeridoEntity),
+          useValue: casoPrecedenteSugeridoRepositoryMock,
         },
         {
           provide: ConfigService,

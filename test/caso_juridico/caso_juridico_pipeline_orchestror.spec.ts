@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 jest.mock('pdf-parse', () => ({
   PDFParse: jest.fn(),
 }));
+jest.mock('pdfkit', () => jest.fn(), { virtual: true });
 
 import { NotFoundException } from '@nestjs/common';
 import { of } from 'rxjs';
@@ -32,6 +33,7 @@ describe('CasoJuridicoPipelineOrchestrator', () => {
   beforeEach(() => {
     mockCasoJuridicoService = {
       obterSecoesPeticao: jest.fn(),
+      findCasoJuridicoAnalysisOrFail: jest.fn(),
     };
 
     mockGenerateCasoSectionsStep = {
@@ -181,6 +183,77 @@ describe('CasoJuridicoPipelineOrchestrator', () => {
         errorCode: 'CASO_JURIDICO_PIPELINE_ERROR',
         recoverable: false,
       },
+    });
+    expect(mockPeticaoPipeline.runCasoJuridico).not.toHaveBeenCalled();
+  });
+
+  it('replayCasoJuridicoAnalysis should emit saved sections and caso precedents', async () => {
+    const secoes = [
+      {
+        id: 1,
+        titulo: 'DOS FATOS',
+        conteudo: 'Fatos do caso',
+        casoJuridicoId: 10,
+      },
+    ];
+    const precedentesSugeridos = [
+      {
+        id: 50,
+        casoJuridicoId: 10,
+        precedenteId: 99,
+        precedente: {
+          id: 99,
+          numero_registro: 'Tema 99',
+          tese: 'Tese do precedente',
+          questao: 'Questão submetida',
+          ultima_atualizacao: new Date('2026-05-31T12:00:00.000Z'),
+          status: { id: 1, nome: 'Ativo' },
+          tribunal: { id: 7, nome: 'Superior Tribunal de Justiça', sigla: 'STJ' },
+          especie: { id: 3, nome: 'Repetitivo', sigla: 'REP' },
+        },
+      },
+    ];
+
+    mockCasoJuridicoService.findCasoJuridicoAnalysisOrFail.mockResolvedValue({
+      caso: { id: 10 },
+      secoes,
+      precedentesSugeridos,
+    });
+
+    const events = await collectEvents(
+      orchestrator.replayCasoJuridicoAnalysis(10),
+    );
+
+    expect(
+      mockCasoJuridicoService.findCasoJuridicoAnalysisOrFail,
+    ).toHaveBeenCalledWith(10);
+    expect(events.map((event) => event.stage)).toEqual([
+      CasoJuridicoPipelineStage.SECOES,
+      'search',
+      'synthesis',
+    ]);
+    expect(events[0].data).toEqual({ secoes, total: 1 });
+    expect(events[1].data).toMatchObject({
+      totalFound: 1,
+      averageSimilarityScore: 0,
+      precedents: [
+        {
+          id: 99,
+          numero_registro: 'Tema 99',
+          status_nome: 'Ativo',
+          tribunal_sigla: 'STJ',
+          especie_sigla: 'REP',
+        },
+      ],
+    });
+    expect(events[2].data).toMatchObject({
+      id: 50,
+      casoJuridicoId: 10,
+      precedenteId: 99,
+      caso_juridico_id: 10,
+      precedente_id: 99,
+      casoJuridico: { id: 10 },
+      precedente: { id: 99 },
     });
     expect(mockPeticaoPipeline.runCasoJuridico).not.toHaveBeenCalled();
   });

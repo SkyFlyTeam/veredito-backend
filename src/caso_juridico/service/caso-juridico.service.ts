@@ -10,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { CasoJuridicoEntity } from '../entity/caso_juridico.entity';
 import { SecoesPeticaoEntity } from '../entity/secoes_peticao.entity';
+import { CasoPrecedenteSugeridoEntity } from '../entity/caso_precedente_sugerido.entity';
 import { UpdateSecaoPeticaoDto } from '../dto/update-secao-peticao.dto';
 
 @Injectable()
@@ -22,6 +23,8 @@ export class CasoJuridicoService {
     private readonly casoRepository: Repository<CasoJuridicoEntity>,
     @InjectRepository(SecoesPeticaoEntity)
     private readonly secoesPeticaoRepository: Repository<SecoesPeticaoEntity>,
+    @InjectRepository(CasoPrecedenteSugeridoEntity)
+    private readonly casoPrecedenteSugeridoRepository: Repository<CasoPrecedenteSugeridoEntity>,
     private readonly configService: ConfigService,
   ) {
     this.openai = new OpenAI({
@@ -104,6 +107,49 @@ export class CasoJuridicoService {
     });
 
     return { caso, secoes };
+  }
+
+  async getMockedResponseForCasoJuridico(): Promise<CasoJuridicoEntity> {
+    const mockedCasoJuridicoId = Number(process.env.MOCKED_CASO_JURIDICO_ID);
+
+    if (!Number.isInteger(mockedCasoJuridicoId) || mockedCasoJuridicoId <= 0) {
+      throw new BadRequestException(
+        'MOCKED_CASO_JURIDICO_ID deve conter o ID válido de um caso jurídico já analisado',
+      );
+    }
+
+    const caso = await this.casoRepository.findOne({
+      where: { id: mockedCasoJuridicoId },
+    });
+
+    if (!caso) {
+      throw new NotFoundException(
+        `Caso Jurídico de mock com ID ${mockedCasoJuridicoId} não encontrado`,
+      );
+    }
+
+    return caso;
+  }
+
+  async findCasoJuridicoAnalysisOrFail(casoId: number): Promise<{
+    caso: CasoJuridicoEntity;
+    secoes: SecoesPeticaoEntity[];
+    precedentesSugeridos: CasoPrecedenteSugeridoEntity[];
+  }> {
+    const { caso, secoes } = await this.obterSecoesPeticao(casoId);
+    const precedentesSugeridos =
+      await this.casoPrecedenteSugeridoRepository.find({
+        where: { casoJuridicoId: casoId },
+        relations: [
+          'precedente',
+          'precedente.status',
+          'precedente.tribunal',
+          'precedente.especie',
+        ],
+        order: { id: 'ASC' },
+      });
+
+    return { caso, secoes, precedentesSugeridos };
   }
 
   async updateSecaoPeticao(

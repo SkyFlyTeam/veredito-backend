@@ -78,6 +78,8 @@ export class ProcessoPipelineOrchestrator {
             data: { information, processo },
           } as ProcessoGeneralInfoEvent);
 
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+
           observer.next({
             stage: ProcessoPipelineStage.PECAS,
             status: 'success',
@@ -93,6 +95,8 @@ export class ProcessoPipelineOrchestrator {
             processo.caminho_arquivo,
           );
 
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          
           await this.forwardPeticaoAnalysis(rawText, observer);
           observer.complete();
         } catch (error) {
