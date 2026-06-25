@@ -23,6 +23,9 @@ jobs:
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env.prod
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.prod
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env.prod
+          echo "MOCKED_PETICAO_ID=${{ secrets.MOCKED_PETICAO_ID }}" >> .env.prod
+          echo "MOCKED_PROCESSO_ID=${{ secrets.MOCKED_PROCESSO_ID }}" >> .env.prod
+          echo "MOCKED_CASO_JURIDICO_ID=${{ secrets.MOCKED_CASO_JURIDICO_ID }}" >> .env.prod
           cp .env.prod .env
 
       - name: Copy files to server
